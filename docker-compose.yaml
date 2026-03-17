@@ -1,0 +1,46 @@
+version: '3.4'
+
+services:
+#  app:
+#    container_name: app
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    command: uvicorn app.main:app --host ${APP_DOCKER_HOST} --port ${APP_PORT}
+#    ports:
+#      - "${APP_PORT}:${APP_PORT}"
+#    volumes:
+#      - .:/app
+#    working_dir: /app
+#    environment:
+#      PORT: 8000
+#    env_file:
+#      - ./.env
+#    depends_on:
+#      - db
+#      - redis
+#    networks:
+#      - shared-network
+
+  mining_equipment_db:
+    image: postgres:16-alpine
+    container_name: mining_equipment_monitoring_db
+
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DB}
+
+
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "${PG_EXTERNAL_PORT}:${PG_INTERNAL_PORT}"
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${PG_USER} -d ${PG_DB}'" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+#
+#    networks:
+#      - shared-network
