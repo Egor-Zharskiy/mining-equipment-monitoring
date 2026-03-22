@@ -9,6 +9,8 @@ authoritative reference after session reloads.
 - Code must be production-quality: clean structure, clear naming, typed, and consistent.
 - After every change, update docs to reflect the new state.
 - Documentation updates may be done without extra confirmation.
+- In test and demo data, human-readable text fields must be filled in Russian.
+- Technical identifiers such as codes may remain stable in English when used as system keys.
 
 ## Interaction Template
 Use this session flow unless explicitly overridden:

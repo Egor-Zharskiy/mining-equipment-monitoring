@@ -86,6 +86,11 @@ The core of the system is:
 - notifications
 - audit_logs
 
+## Implemented So Far
+- Access control foundation: users, roles, permissions, JWT auth
+- Equipment registry: equipment types and equipment
+- Monitoring parameter catalog: parameters and equipment type parameter bindings
+
 ## Important Domain Rules
 - equipment belongs to an equipment type
 - equipment type defines supported monitored parameters

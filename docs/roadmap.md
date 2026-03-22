@@ -39,6 +39,9 @@ Implemented / in progress.
 ### Expected Result
 The system knows what physical units are being monitored.
 
+### Status
+Implemented.
+
 ---
 
 ## Stage 3 — Monitoring Parameters
@@ -58,6 +61,9 @@ The system knows what physical units are being monitored.
 
 ### Expected Result
 The system knows which metrics are relevant for each equipment type.
+
+### Status
+Implemented.
 
 ---
 

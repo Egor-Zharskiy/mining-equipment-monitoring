@@ -8,13 +8,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 
-class EquipmentType(Base):
-    """Represents a catalog type of monitored equipment."""
+class Parameter(Base):
+    """Represents a monitoring metric available in the system."""
 
-    __tablename__ = "equipment_types"
+    __tablename__ = "parameters"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    unit: Mapped[str | None] = mapped_column(String(32), nullable=True)
     description: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -25,9 +27,7 @@ class EquipmentType(Base):
         onupdate=func.now(),
     )
 
-    equipment: Mapped[list["Equipment"]] = relationship(back_populates="equipment_type", lazy="selectin")
-    parameter_bindings: Mapped[list["EquipmentTypeParameter"]] = relationship(
-        back_populates="equipment_type",
+    equipment_type_bindings: Mapped[list["EquipmentTypeParameter"]] = relationship(
+        back_populates="parameter",
         lazy="selectin",
-        cascade="all, delete-orphan",
     )
