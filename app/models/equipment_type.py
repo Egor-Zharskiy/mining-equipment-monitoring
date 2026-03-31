@@ -31,3 +31,8 @@ class EquipmentType(Base):
         lazy="selectin",
         cascade="all, delete-orphan",
     )
+    threshold_rules: Mapped[list["ThresholdRule"]] = relationship(
+        back_populates="equipment_type",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )

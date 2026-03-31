@@ -31,3 +31,7 @@ class Parameter(Base):
         back_populates="parameter",
         lazy="selectin",
     )
+    threshold_rules: Mapped[list["ThresholdRule"]] = relationship(
+        back_populates="parameter",
+        lazy="selectin",
+    )

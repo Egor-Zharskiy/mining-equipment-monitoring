@@ -25,8 +25,16 @@ The following backend functionality is already implemented or started:
 - binding API for equipment type parameters
 - API tests for success paths, access control, filtering, and core negative scenarios
 
+### Threshold Rules
+- threshold rules by equipment type and parameter
+- CRUD for threshold rules
+- validation against equipment type parameter bindings
+- threshold ordering validation
+- permission-protected API for read and management operations
+- API tests for success paths, filtering, access control, and negative scenarios
+
 ## Current Focus
-We are moving from the equipment registry into the monitoring core.
+We are moving from threshold configuration toward telemetry ingestion.
 
 The access module should be treated as the base for all future modules.
 
@@ -41,6 +49,7 @@ The access module should be treated as the base for all future modules.
 - equipment model exists
 - parameter model exists
 - equipment type parameter binding model exists
+- threshold rule model exists
 
 ## What Must Be Preserved
 - current auth/access architecture
@@ -57,14 +66,13 @@ The access module should be treated as the base for all future modules.
 ## Current Project Direction
 Now the project should move into business modules in the following general order:
 
-1. threshold rules
-2. telemetry ingestion
-3. equipment state evaluation
-4. events
-5. maintenance
-6. notifications
-7. analytics
-8. audit improvements
+1. telemetry ingestion
+2. equipment state evaluation
+3. events
+4. maintenance
+5. notifications
+6. analytics
+7. audit improvements
 
 ## Important Reminder
 This is a bachelor diploma backend project.
@@ -77,4 +85,5 @@ Priorities:
 
 ## Local Development Data
 - On 2026-03-23, the local development database was manually populated with Stage 3 test data for `parameters` and `equipment_type_parameters`.
+- On 2026-03-23, the local development database was manually populated with Stage 4 base data for `threshold_rules`.
 - Details are documented in `docs/local-data.md`.

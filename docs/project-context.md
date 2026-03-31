@@ -90,6 +90,7 @@ The core of the system is:
 - Access control foundation: users, roles, permissions, JWT auth
 - Equipment registry: equipment types and equipment
 - Monitoring parameter catalog: parameters and equipment type parameter bindings
+- Threshold rules: per-equipment-type parameter thresholds with validation and RBAC
 
 ## Important Domain Rules
 - equipment belongs to an equipment type
