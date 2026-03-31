@@ -8,6 +8,7 @@ from app.models import (
     Permission,
     Role,
     RolePermission,
+    ThresholdRule,
     User,
     UserRole,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "Permission",
     "Role",
     "RolePermission",
+    "ThresholdRule",
     "User",
     "UserRole",
 ]
