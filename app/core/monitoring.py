@@ -1,0 +1,11 @@
+"""Shared monitoring status constants."""
+
+METRIC_STATUS_NORMAL = "normal"
+METRIC_STATUS_WARNING = "warning"
+METRIC_STATUS_CRITICAL = "critical"
+
+VALID_MONITORING_STATUSES = (
+    METRIC_STATUS_NORMAL,
+    METRIC_STATUS_WARNING,
+    METRIC_STATUS_CRITICAL,
+)
