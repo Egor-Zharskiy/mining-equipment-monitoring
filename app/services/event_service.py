@@ -1,3 +1,5 @@
+import logging
+
 from app.core.events import (
     EVENT_TYPE_EQUIPMENT_CRITICAL,
     EVENT_TYPE_EQUIPMENT_RECOVERED,
@@ -15,6 +17,8 @@ from app.core.monitoring import (
 )
 from app.repositories.event_repository import EventRepository
 from app.services.notification_service import NotificationService
+
+logger = logging.getLogger(__name__)
 
 
 class EventService:
@@ -59,6 +63,17 @@ class EventService:
                 title=parameter_event["title"],
                 message=parameter_event["message"],
             )
+            logger.info(
+                "monitoring_event_created",
+                extra={
+                    "event_id": str(created_event.id),
+                    "equipment_id": str(equipment.id),
+                    "parameter_id": str(parameter.id),
+                    "telemetry_reading_id": str(telemetry_reading.id),
+                    "event_type": created_event.event_type,
+                    "severity": created_event.severity,
+                },
+            )
             if self._notification_service is not None:
                 await self._notification_service.notify_for_event(created_event)
 
@@ -76,6 +91,17 @@ class EventService:
                 severity=equipment_event["severity"],
                 title=equipment_event["title"],
                 message=equipment_event["message"],
+            )
+            logger.info(
+                "monitoring_event_created",
+                extra={
+                    "event_id": str(created_event.id),
+                    "equipment_id": str(equipment.id),
+                    "parameter_id": None,
+                    "telemetry_reading_id": str(telemetry_reading.id),
+                    "event_type": created_event.event_type,
+                    "severity": created_event.severity,
+                },
             )
             if self._notification_service is not None:
                 await self._notification_service.notify_for_event(created_event)

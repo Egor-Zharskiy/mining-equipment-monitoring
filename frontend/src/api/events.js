@@ -10,3 +10,8 @@ export async function fetchEvents(params = {}) {
 
   return response.data
 }
+
+export async function createMaintenanceTaskFromEvent(eventId, payload) {
+  const response = await http.post(`/events/${eventId}/maintenance-task`, payload)
+  return response.data
+}

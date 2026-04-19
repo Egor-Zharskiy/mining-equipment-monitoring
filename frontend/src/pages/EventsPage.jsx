@@ -1,10 +1,17 @@
+import AddTaskRoundedIcon from '@mui/icons-material/AddTaskRounded'
 import FilterListRoundedIcon from '@mui/icons-material/FilterListRounded'
 import {
   Alert,
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   MenuItem,
   Skeleton,
+  Snackbar,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -14,12 +21,12 @@ import {
   Typography,
 } from '@mui/material'
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import { demoEquipmentList, demoEvents } from '../api/demoData'
 import { fetchEquipmentList } from '../api/equipment'
-import { fetchEvents } from '../api/events'
-import { DataFallbackNotice } from '../components/DataFallbackNotice'
+import { createMaintenanceTaskFromEvent, fetchEvents } from '../api/events'
+import { fetchUsers } from '../api/users'
+import { useAuth } from '../auth/useAuth'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { SectionCard } from '../components/SectionCard'
@@ -27,13 +34,42 @@ import { StatCard } from '../components/StatCard'
 import { StatusChip } from '../components/StatusChip'
 import { formatDateTime, formatEventType, formatNumber } from '../utils/format'
 
+const emptyEventTaskForm = {
+  title: '',
+  description: '',
+  priority: 'high',
+  dueAt: '',
+  assignedToUserId: '',
+}
+
+function toDateTimeLocalValue(value) {
+  if (!value) {
+    return ''
+  }
+
+  const date = new Date(value)
+  const timezoneOffset = date.getTimezoneOffset() * 60_000
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16)
+}
+
+function toApiDateTime(value) {
+  return value ? new Date(value).toISOString() : null
+}
+
 export function EventsPage() {
   const [searchParams] = useSearchParams()
+  const queryClient = useQueryClient()
+  const { hasPermission } = useAuth()
+  const canCreateMaintenanceTask = hasPermission('maintenance.manage')
+  const canReadUsers = hasPermission('users.read')
   const searchQuery = searchParams.get('q') ?? ''
   const [severityFilter, setSeverityFilter] = useState('')
   const [eventTypeFilter, setEventTypeFilter] = useState('')
   const [equipmentIdFilter, setEquipmentIdFilter] = useState('')
   const [searchFilter, setSearchFilter] = useState(searchQuery)
+  const [selectedEvent, setSelectedEvent] = useState(null)
+  const [taskForm, setTaskForm] = useState(emptyEventTaskForm)
+  const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'success' })
   const focusEventId = searchParams.get('focus')
 
   useEffect(() => {
@@ -54,10 +90,36 @@ export function EventsPage() {
     queryKey: ['equipment', 'filter-options'],
     queryFn: fetchEquipmentList,
   })
+  const usersQuery = useQuery({
+    queryKey: ['users', 'event-task-assignees'],
+    queryFn: fetchUsers,
+    enabled: canCreateMaintenanceTask && canReadUsers,
+  })
+  const createTaskFromEventMutation = useMutation({
+    mutationFn: ({ eventId, payload }) => createMaintenanceTaskFromEvent(eventId, payload),
+    onSuccess: (task) => {
+      queryClient.invalidateQueries({ queryKey: ['maintenance'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      setSelectedEvent(null)
+      setTaskForm(emptyEventTaskForm)
+      setFeedback({
+        open: true,
+        message: `Задача ТО создана: ${task.title}.`,
+        severity: 'success',
+      })
+    },
+    onError: (error) => {
+      setFeedback({
+        open: true,
+        message: error.message || 'Не удалось создать задачу ТО из события.',
+        severity: 'error',
+      })
+    },
+  })
 
-  const usingFallback = eventsQuery.isError
-  const baseEvents = usingFallback ? demoEvents : (eventsQuery.data ?? [])
-  const equipmentOptions = equipmentQuery.isError ? demoEquipmentList : (equipmentQuery.data ?? [])
+  const baseEvents = eventsQuery.data ?? []
+  const equipmentOptions = equipmentQuery.data ?? []
+  const userOptions = usersQuery.data ?? []
   const normalizedSearch = searchFilter.trim().toLowerCase()
   const events = baseEvents.filter((item) => {
     if (!normalizedSearch) {
@@ -77,7 +139,7 @@ export function EventsPage() {
 
     return haystack.includes(normalizedSearch)
   })
-  const isInitialLoading = !usingFallback && eventsQuery.isLoading && baseEvents.length === 0
+  const isInitialLoading = eventsQuery.isLoading && baseEvents.length === 0
   const criticalCount = events.filter((item) => item.severity === 'critical').length
   const warningCount = events.filter((item) => item.severity === 'warning').length
   const eventTypeOptions = Array.from(new Set(baseEvents.map((item) => item.event_type))).sort()
@@ -87,6 +149,41 @@ export function EventsPage() {
     setEventTypeFilter('')
     setEquipmentIdFilter('')
     setSearchFilter('')
+  }
+
+  function openTaskDialog(event) {
+    const dueAt = new Date()
+    dueAt.setDate(dueAt.getDate() + 1)
+    setSelectedEvent(event)
+    setTaskForm({
+      title: `Проверить событие: ${event.title}`.slice(0, 150),
+      description: `${event.message}\n\nИсточник: событие ${event.id}`.slice(0, 500),
+      priority: event.severity === 'critical' ? 'high' : 'medium',
+      dueAt: toDateTimeLocalValue(dueAt.toISOString()),
+      assignedToUserId: '',
+    })
+  }
+
+  function closeTaskDialog() {
+    if (createTaskFromEventMutation.isPending) {
+      return
+    }
+    setSelectedEvent(null)
+    setTaskForm(emptyEventTaskForm)
+  }
+
+  function submitTaskFromEvent(event) {
+    event.preventDefault()
+    createTaskFromEventMutation.mutate({
+      eventId: selectedEvent.id,
+      payload: {
+        title: taskForm.title.trim(),
+        description: taskForm.description.trim() || null,
+        priority: taskForm.priority,
+        due_at: toApiDateTime(taskForm.dueAt),
+        assigned_to_user_id: taskForm.assignedToUserId || null,
+      },
+    })
   }
 
   return (
@@ -102,10 +199,19 @@ export function EventsPage() {
         }
       />
 
-      {usingFallback ? <DataFallbackNotice /> : null}
-      {!usingFallback && eventsQuery.isError ? (
+      {eventsQuery.isError ? (
         <Alert severity="warning">
-          Не удалось получить события из API. Показан резервный набор данных.
+          Не удалось получить события из API. Проверьте доступность backend или права пользователя.
+        </Alert>
+      ) : null}
+      {equipmentQuery.isError ? (
+        <Alert severity="info">
+          Не удалось загрузить список оборудования для фильтра. Лента событий продолжает работать без этого справочника.
+        </Alert>
+      ) : null}
+      {canCreateMaintenanceTask && !canReadUsers ? (
+        <Alert severity="info">
+          Создание задач из событий доступно, но выбор исполнителя скрыт без `users.read`.
         </Alert>
       ) : null}
 
@@ -188,7 +294,7 @@ export function EventsPage() {
           </Box>
         ) : events.length ? (
           <Box sx={{ overflowX: 'auto' }}>
-            <Table sx={{ minWidth: 920 }}>
+            <Table sx={{ minWidth: canCreateMaintenanceTask ? 1120 : 920 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Событие</TableCell>
@@ -196,6 +302,7 @@ export function EventsPage() {
                   <TableCell>Тип</TableCell>
                   <TableCell>Критичность</TableCell>
                   <TableCell>Создано</TableCell>
+                  {canCreateMaintenanceTask ? <TableCell align="right">Действия</TableCell> : null}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -213,6 +320,18 @@ export function EventsPage() {
                       <StatusChip value={event.severity} />
                     </TableCell>
                     <TableCell>{formatDateTime(event.created_at)}</TableCell>
+                    {canCreateMaintenanceTask ? (
+                      <TableCell align="right">
+                        <Button
+                          onClick={() => openTaskDialog(event)}
+                          size="small"
+                          startIcon={<AddTaskRoundedIcon />}
+                          variant="outlined"
+                        >
+                          Задача ТО
+                        </Button>
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 ))}
               </TableBody>
@@ -227,6 +346,92 @@ export function EventsPage() {
           />
         )}
       </SectionCard>
+
+      <Dialog fullWidth maxWidth="sm" onClose={closeTaskDialog} open={Boolean(selectedEvent)}>
+        <Box component="form" onSubmit={submitTaskFromEvent}>
+          <DialogTitle>Создать задачу ТО из события</DialogTitle>
+          <DialogContent sx={{ display: 'grid', gap: 2.5, pt: '10px !important' }}>
+            {selectedEvent ? (
+              <Alert severity={selectedEvent.severity === 'critical' ? 'error' : 'warning'}>
+                {selectedEvent.equipment.name}: {formatEventType(selectedEvent.event_type)}
+              </Alert>
+            ) : null}
+            <TextField
+              label="Название задачи"
+              onChange={(event) => setTaskForm((current) => ({ ...current, title: event.target.value }))}
+              required
+              value={taskForm.title}
+            />
+            <TextField
+              label="Описание"
+              multiline
+              minRows={4}
+              onChange={(event) => setTaskForm((current) => ({ ...current, description: event.target.value }))}
+              value={taskForm.description}
+            />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                label="Приоритет"
+                onChange={(event) => setTaskForm((current) => ({ ...current, priority: event.target.value }))}
+                select
+                sx={{ flex: 1 }}
+                value={taskForm.priority}
+              >
+                <MenuItem value="low">Низкий</MenuItem>
+                <MenuItem value="medium">Средний</MenuItem>
+                <MenuItem value="high">Высокий</MenuItem>
+              </TextField>
+              <TextField
+                InputLabelProps={{ shrink: true }}
+                label="Срок"
+                onChange={(event) => setTaskForm((current) => ({ ...current, dueAt: event.target.value }))}
+                sx={{ flex: 1 }}
+                type="datetime-local"
+                value={taskForm.dueAt}
+              />
+            </Stack>
+            {canReadUsers ? (
+              <TextField
+                label="Исполнитель"
+                onChange={(event) =>
+                  setTaskForm((current) => ({ ...current, assignedToUserId: event.target.value }))
+                }
+                select
+                value={taskForm.assignedToUserId}
+              >
+                <MenuItem value="">Не назначать</MenuItem>
+                {userOptions.map((item) => (
+                  <MenuItem key={item.id} value={item.id}>
+                    {item.first_name} {item.last_name} ({item.email})
+                  </MenuItem>
+                ))}
+              </TextField>
+            ) : null}
+          </DialogContent>
+          <DialogActions>
+            <Button disabled={createTaskFromEventMutation.isPending} onClick={closeTaskDialog}>
+              Отмена
+            </Button>
+            <Button disabled={createTaskFromEventMutation.isPending} type="submit" variant="contained">
+              Создать задачу
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+
+      <Snackbar
+        autoHideDuration={5000}
+        onClose={() => setFeedback((current) => ({ ...current, open: false }))}
+        open={feedback.open}
+      >
+        <Alert
+          onClose={() => setFeedback((current) => ({ ...current, open: false }))}
+          severity={feedback.severity}
+          sx={{ width: '100%' }}
+        >
+          {feedback.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

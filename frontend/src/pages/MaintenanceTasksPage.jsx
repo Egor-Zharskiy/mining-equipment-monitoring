@@ -23,7 +23,6 @@ import {
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import { demoMaintenanceTasks } from '../api/demoData'
 import { fetchEquipmentList } from '../api/equipment'
 import {
   completeMaintenanceTask,
@@ -34,7 +33,6 @@ import {
 import { fetchUsers } from '../api/users'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { DataFallbackNotice } from '../components/DataFallbackNotice'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { SectionCard } from '../components/SectionCard'
@@ -162,8 +160,7 @@ export function MaintenanceTasksPage() {
     enabled: canReadUsers,
   })
 
-  const usingFallback = tasksQuery.isError
-  const baseTasks = usingFallback ? demoMaintenanceTasks : (tasksQuery.data ?? [])
+  const baseTasks = tasksQuery.data ?? []
   const equipmentOptions = equipmentQuery.data ?? []
   const userOptions =
     usersQuery.data?.length
@@ -199,7 +196,7 @@ export function MaintenanceTasksPage() {
 
     return haystack.includes(normalizedSearch)
   })
-  const isInitialLoading = !usingFallback && tasksQuery.isLoading && baseTasks.length === 0
+  const isInitialLoading = tasksQuery.isLoading && baseTasks.length === 0
   const openCount = tasks.filter((item) => item.status === 'open').length
   const inProgressCount = tasks.filter((item) => item.status === 'in_progress').length
   const completedCount = tasks.filter((item) => item.status === 'done').length
@@ -368,10 +365,9 @@ export function MaintenanceTasksPage() {
         }
       />
 
-      {usingFallback ? <DataFallbackNotice /> : null}
-      {!usingFallback && tasksQuery.isError ? (
+      {tasksQuery.isError ? (
         <Alert severity="warning">
-          Не удалось загрузить задачи ТО из API. Показан резервный набор данных.
+          Не удалось загрузить задачи ТО из API. Проверьте доступность backend или права пользователя.
         </Alert>
       ) : null}
       {canReadUsers && usersQuery.isError ? (

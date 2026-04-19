@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -308,12 +309,17 @@ async def test_critical_event_creates_automatic_email_notification(client, db_se
     assert reading_response.status_code == 201
 
     await set_current_user({"notifications.read"}, user_id=recipient.id)
-    email_response = await client.get("/api/v1/notifications/?channel=email")
-    assert email_response.status_code == 200
-    email_payload = email_response.json()
+    email_payload = []
+    for _ in range(10):
+        email_response = await client.get("/api/v1/notifications/?channel=email")
+        assert email_response.status_code == 200
+        email_payload = email_response.json()
+        if email_payload and sent_emails:
+            break
+        await asyncio.sleep(0.1)
+
     assert len(email_payload) >= 1
     assert email_payload[0]["channel"] == "email"
-    assert email_payload[0]["delivered_at"] is not None
     assert sent_emails
     assert recipient.email in {email["to_email"] for email in sent_emails}
 

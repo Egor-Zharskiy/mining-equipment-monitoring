@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -9,6 +10,8 @@ from app.repositories.telemetry_reading_repository import \
     TelemetryReadingRepository
 from app.services.equipment_state_service import EquipmentStateService
 from app.schemas.telemetry_reading import TelemetryReadingCreate
+
+logger = logging.getLogger(__name__)
 
 
 class TelemetryReadingService:
@@ -60,9 +63,27 @@ class TelemetryReadingService:
             value=payload.value,
             measured_at=payload.measured_at,
         )
+        logger.info(
+            "telemetry_reading_created",
+            extra={
+                "telemetry_reading_id": str(telemetry_reading.id),
+                "equipment_id": str(equipment.id),
+                "parameter_id": str(parameter.id),
+                "value": str(payload.value),
+                "measured_at": payload.measured_at.isoformat(),
+            },
+        )
 
         await self._equipment_state_service.process_new_reading(
             telemetry_reading)
+        logger.info(
+            "telemetry_reading_processed",
+            extra={
+                "telemetry_reading_id": str(telemetry_reading.id),
+                "equipment_id": str(equipment.id),
+                "parameter_id": str(parameter.id),
+            },
+        )
         return await self._telemetry_reading_repository.get_by_id(
             telemetry_reading.id)
 

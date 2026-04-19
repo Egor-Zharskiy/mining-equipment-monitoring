@@ -17,9 +17,7 @@ import {
 import { useDeferredValue, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { demoEquipmentList } from '../api/demoData'
 import { fetchEquipmentList } from '../api/equipment'
-import { DataFallbackNotice } from '../components/DataFallbackNotice'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { SectionCard } from '../components/SectionCard'
@@ -38,8 +36,7 @@ export function EquipmentListPage() {
     queryFn: fetchEquipmentList,
   })
 
-  const usingFallback = equipmentQuery.isError
-  const equipment = usingFallback ? demoEquipmentList : (equipmentQuery.data ?? [])
+  const equipment = equipmentQuery.data ?? []
   const normalizedSearch = deferredSearchValue.trim().toLowerCase()
   const filteredEquipment = equipment.filter((item) => {
     const matchesStatus =
@@ -59,7 +56,7 @@ export function EquipmentListPage() {
 
     return matchesStatus && matchesSearch
   })
-  const isInitialLoading = !usingFallback && equipmentQuery.isLoading && equipment.length === 0
+  const isInitialLoading = equipmentQuery.isLoading && equipment.length === 0
   const activeCount = filteredEquipment.filter((item) => item.is_active).length
   const warningCount = filteredEquipment.filter((item) => item.monitoringStatus === 'warning').length
   const criticalCount = filteredEquipment.filter((item) => item.monitoringStatus === 'critical').length
@@ -82,8 +79,7 @@ export function EquipmentListPage() {
         }
       />
 
-      {usingFallback ? <DataFallbackNotice /> : null}
-      {!usingFallback && equipmentQuery.isError ? (
+      {equipmentQuery.isError ? (
         <Alert severity="warning">
           Не удалось загрузить список оборудования. Проверьте доступ к API или попробуйте обновить страницу.
         </Alert>

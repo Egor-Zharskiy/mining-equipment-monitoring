@@ -28,11 +28,9 @@ import {
   YAxis,
 } from 'recharts'
 import { fetchTelemetryHistory } from '../api/dashboard'
-import { demoEquipmentList, findDemoEquipmentDetails } from '../api/demoData'
 import { fetchEquipmentDetails, fetchEquipmentTypeParameterBindings } from '../api/equipment'
 import { createTelemetryReading } from '../api/telemetry'
 import { useAuth } from '../auth/useAuth'
-import { DataFallbackNotice } from '../components/DataFallbackNotice'
 import { EmptyState } from '../components/EmptyState'
 import { LoadingScreen } from '../components/LoadingScreen'
 import { PageHeader } from '../components/PageHeader'
@@ -95,7 +93,6 @@ export function EquipmentDetailsPage() {
   const queryClient = useQueryClient()
   const { hasPermission } = useAuth()
   const canCreateTelemetry = hasPermission('telemetry.create')
-  const demoData = findDemoEquipmentDetails(equipmentId)
   const [selectedParameterId, setSelectedParameterId] = useState('')
   const [telemetryForm, setTelemetryForm] = useState({
     parameterId: '',
@@ -110,8 +107,7 @@ export function EquipmentDetailsPage() {
     enabled: Boolean(equipmentId),
   })
 
-  const equipment = equipmentQuery.data ?? demoData
-  const usingFallback = equipmentQuery.isError && Boolean(demoData)
+  const equipment = equipmentQuery.data
   const monitoringState = equipment
     ? (equipment.monitoringState ?? {
         status: equipment.monitoringStatus ?? 'unknown',
@@ -134,7 +130,7 @@ export function EquipmentDetailsPage() {
   const parameterBindingsQuery = useQuery({
     queryKey: ['equipment-type-parameters', equipment?.equipment_type?.id],
     queryFn: () => fetchEquipmentTypeParameterBindings(equipment.equipment_type.id),
-    enabled: Boolean(equipment?.equipment_type?.id && !usingFallback),
+    enabled: Boolean(equipment?.equipment_type?.id),
   })
   const telemetryParameterOptions = buildParameterOptions(
     parameterStates,
@@ -234,8 +230,7 @@ export function EquipmentDetailsPage() {
           subtitle="Сначала откройте одну из доступных единиц из списка."
         >
           <Typography color="text.secondary">
-            Доступные карточки оборудования:{' '}
-            {demoEquipmentList.slice(0, 2).map((item) => item.code).join(', ')}.
+            API не вернул данные для этой карточки. Вернитесь к списку оборудования и выберите существующую запись.
           </Typography>
         </SectionCard>
       </Box>
@@ -255,8 +250,7 @@ export function EquipmentDetailsPage() {
         }
       />
 
-      {usingFallback ? <DataFallbackNotice /> : null}
-      {!usingFallback && equipmentQuery.isError ? (
+      {equipmentQuery.isError ? (
         <Alert severity="warning">
           Не удалось загрузить карточку оборудования из API. Проверьте, существует ли запись и есть ли права доступа.
         </Alert>
@@ -363,16 +357,12 @@ export function EquipmentDetailsPage() {
       </Box>
 
       <SectionCard
-        title="Демо-ввод телеметрии"
+        title="Ручной ввод телеметрии"
         subtitle="Отправьте новое измерение, чтобы сразу пересчитать состояние, создать событие и запустить уведомления."
       >
         {!canCreateTelemetry ? (
           <Alert severity="info">
             У текущего пользователя нет права `telemetry.create`, поэтому отправка телеметрии скрыта.
-          </Alert>
-        ) : usingFallback ? (
-          <Alert severity="warning">
-            Карточка открыта на резервных demo-данных. Отправка телеметрии доступна только для реальной записи из API.
           </Alert>
         ) : !telemetryParameterOptions.length ? (
           <EmptyState

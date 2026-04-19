@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -51,6 +52,15 @@ class NotificationService:
             return
 
         recipients = await self._user_repository.get_active_with_permission("notifications.read")
+        logger.info(
+            "event_notification_dispatch_started",
+            extra={
+                "event_id": str(event.id),
+                "notification_type": notification_type,
+                "severity": event.severity,
+                "recipient_count": len(recipients),
+            },
+        )
         for recipient in recipients:
             for channel in VALID_NOTIFICATION_CHANNELS:
                 if await self._notification_repository.exists_for_source(
@@ -157,13 +167,34 @@ class NotificationService:
             message=message,
             delivered_at=self._resolve_initial_delivered_at(channel),
         )
+        logger.info(
+            "notification_created",
+            extra={
+                "notification_id": str(notification.id),
+                "recipient_user_id": str(notification.recipient_user_id),
+                "notification_type": notification.notification_type,
+                "channel": notification.channel,
+                "event_id": str(notification.event_id) if notification.event_id else None,
+                "maintenance_task_id": (
+                    str(notification.maintenance_task_id)
+                    if notification.maintenance_task_id
+                    else None
+                ),
+            },
+        )
 
         if channel != NOTIFICATION_CHANNEL_EMAIL:
             return notification
 
         if self._background_tasks is not None:
-            self._background_tasks.add_task(
-                self._deliver_email_notification_snapshot,
+            logger.info(
+                "email_notification_scheduled",
+                extra={
+                    "notification_id": str(notification.id),
+                    "recipient_user_id": str(notification.recipient_user_id),
+                },
+            )
+            self._schedule_email_notification_delivery(
                 notification_id=notification.id,
                 to_email=notification.recipient_user.email,
                 subject=notification.title,
@@ -173,6 +204,10 @@ class NotificationService:
 
         delivered_at = await self._deliver_email_notification(notification)
         if delivered_at is None:
+            logger.warning(
+                "email_notification_not_delivered",
+                extra={"notification_id": str(notification.id)},
+            )
             return notification
 
         return await self._notification_repository.update(
@@ -278,6 +313,33 @@ class NotificationService:
 
         await self._mark_email_notification_delivered(notification_id, delivered_at)
 
+    def _schedule_email_notification_delivery(
+        self,
+        *,
+        notification_id: UUID,
+        to_email: str,
+        subject: str,
+        body: str,
+    ) -> None:
+        task = asyncio.create_task(
+            self._deliver_email_notification_snapshot(
+                notification_id=notification_id,
+                to_email=to_email,
+                subject=subject,
+                body=body,
+            )
+        )
+        task.add_done_callback(self._log_background_delivery_failure)
+
+    @staticmethod
+    def _log_background_delivery_failure(task: asyncio.Task) -> None:
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            return
+        except Exception:
+            logger.exception("Email notification background task failed.")
+
     async def _send_email_notification(
         self,
         *,
@@ -300,7 +362,15 @@ class NotificationService:
             return None
 
         if not delivered:
+            logger.warning(
+                "email_notification_delivery_skipped",
+                extra={"notification_id": str(notification_id)},
+            )
             return None
+        logger.info(
+            "email_notification_delivered",
+            extra={"notification_id": str(notification_id)},
+        )
         return datetime.now(UTC)
 
     async def _mark_email_notification_delivered(self, notification_id: UUID, delivered_at: datetime) -> None:
@@ -312,30 +382,38 @@ class NotificationService:
             )
             return
 
-        async with session_maker() as session:
-            repository = NotificationRepository(session)
-            try:
-                notification = await repository.get_by_id(notification_id)
-                if notification is None:
-                    updated = await self._mark_email_notification_delivered_in_current_session(
-                        notification_id,
-                        delivered_at,
+        for attempt in range(5):
+            async with session_maker() as session:
+                repository = NotificationRepository(session)
+                try:
+                    notification = await repository.get_by_id(notification_id)
+                    if notification is None:
+                        await session.rollback()
+                    else:
+                        await repository.update(notification, delivered_at=delivered_at)
+                        await session.commit()
+                        return
+                except SQLAlchemyError:
+                    await session.rollback()
+                    logger.exception(
+                        "Email notification delivery status update failed.",
+                        extra={"notification_id": str(notification_id)},
                     )
-                    if not updated:
-                        logger.warning(
-                            "Email notification was delivered but notification row was not found.",
-                            extra={"notification_id": str(notification_id)},
-                        )
                     return
 
-                await repository.update(notification, delivered_at=delivered_at)
-                await session.commit()
-            except SQLAlchemyError:
-                await session.rollback()
-                logger.exception(
-                    "Email notification delivery status update failed.",
-                    extra={"notification_id": str(notification_id)},
-                )
+            await asyncio.sleep(0.1 * (attempt + 1))
+
+        updated = await self._mark_email_notification_delivered_in_current_session(
+            notification_id,
+            delivered_at,
+        )
+        if updated:
+            return
+
+        logger.warning(
+            "Email notification was delivered but notification row was not found.",
+            extra={"notification_id": str(notification_id)},
+        )
 
     async def _mark_email_notification_delivered_in_current_session(
         self,

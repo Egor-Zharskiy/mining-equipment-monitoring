@@ -1,10 +1,13 @@
 import asyncio
+import logging
 import smtplib
 from email.message import EmailMessage
 from email.utils import formataddr
 
 from app.config import mail_config
 from app.config.mail_config import MailConfig
+
+logger = logging.getLogger(__name__)
 
 
 class EmailDeliveryError(RuntimeError):
@@ -21,19 +24,23 @@ class EmailService:
         """Send a plain-text email if mail delivery is enabled."""
 
         if not self._config.enabled:
+            logger.info("smtp_delivery_disabled", extra={"to_email": to_email})
             return False
 
         try:
             self._config.validate_delivery_settings()
         except ValueError as error:
+            logger.warning("smtp_configuration_invalid", extra={"reason": str(error)})
             raise EmailDeliveryError(str(error)) from error
 
         try:
             message = self._build_message(to_email=to_email, subject=subject, body=body)
             await asyncio.to_thread(self._send_message, to_email, message)
         except (OSError, smtplib.SMTPException, ValueError) as error:
+            logger.exception("smtp_delivery_failed", extra={"to_email": to_email})
             raise EmailDeliveryError("SMTP email delivery failed.") from error
 
+        logger.info("smtp_email_sent", extra={"to_email": to_email})
         return True
 
     def _build_message(self, *, to_email: str, subject: str, body: str) -> EmailMessage:

@@ -11,6 +11,9 @@ class AppConfig:
     api_v1_prefix: str = get_env("API_V1_PREFIX", "/api/v1") or "/api/v1"
     runtime_notifications_enabled: bool = get_env_bool("ENABLE_RUNTIME_NOTIFICATIONS", True)
     auth_profiling_enabled: bool = get_env_bool("ENABLE_AUTH_PROFILING", False)
+    log_level: str = get_env("LOG_LEVEL", "INFO") or "INFO"
+    log_format: str = get_env("LOG_FORMAT", "plain") or "plain"
+    log_requests_enabled: bool = get_env_bool("LOG_REQUESTS", True)
     cors_allow_origins: list[str] = field(
         default_factory=lambda: get_env_list(
             "CORS_ALLOW_ORIGINS",

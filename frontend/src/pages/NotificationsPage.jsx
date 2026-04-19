@@ -22,10 +22,6 @@ import {
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  demoNotifications,
-  demoUnreadNotificationCount,
-} from '../api/demoData'
-import {
   createManualNotification,
   fetchNotifications,
   fetchUnreadNotificationCount,
@@ -33,7 +29,6 @@ import {
 } from '../api/notifications'
 import { fetchUsers } from '../api/users'
 import { useAuth } from '../auth/useAuth'
-import { DataFallbackNotice } from '../components/DataFallbackNotice'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { SectionCard } from '../components/SectionCard'
@@ -121,16 +116,15 @@ export function NotificationsPage() {
     },
   })
 
-  const usingFallback = notificationsQuery.isError
-  const notifications = usingFallback ? demoNotifications : (notificationsQuery.data ?? [])
+  const notifications = notificationsQuery.data ?? []
   const users = usersQuery.data ?? []
-  const unreadCount = unreadCountQuery.data?.unread_count ?? demoUnreadNotificationCount.unread_count
+  const unreadCount = unreadCountQuery.data?.unread_count ?? 0
   const emailCount = notifications.filter((item) => item.channel === 'email').length
   const unreadVisibleCount = notifications.filter((item) => !item.is_read).length
   const notificationTypeOptions = Array.from(
     new Set(notifications.map((item) => item.notification_type)),
   ).sort()
-  const isInitialLoading = !usingFallback && notificationsQuery.isLoading && notifications.length === 0
+  const isInitialLoading = notificationsQuery.isLoading && notifications.length === 0
 
   function resetFilters() {
     setChannelFilter('')
@@ -183,13 +177,12 @@ export function NotificationsPage() {
         }
       />
 
-      {usingFallback ? <DataFallbackNotice /> : null}
-      {!usingFallback && notificationsQuery.isError ? (
+      {notificationsQuery.isError ? (
         <Alert severity="warning">
-          Не удалось загрузить уведомления из API. Показан резервный набор данных.
+          Не удалось загрузить уведомления из API. Проверьте доступность backend или права пользователя.
         </Alert>
       ) : null}
-      {!usingFallback && unreadCountQuery.isError ? (
+      {unreadCountQuery.isError ? (
         <Alert severity="info">
           Счетчик непрочитанных временно недоступен. Список уведомлений продолжает работать.
         </Alert>
@@ -275,7 +268,7 @@ export function NotificationsPage() {
                   secondaryAction={
                     !notification.is_read ? (
                       <Button
-                        disabled={markReadMutation.isPending || usingFallback}
+                        disabled={markReadMutation.isPending}
                         onClick={() => markReadMutation.mutate(notification.id)}
                         size="small"
                         variant="outlined"

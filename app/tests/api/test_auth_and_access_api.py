@@ -49,6 +49,17 @@ async def test_login_returns_access_token_for_active_user(client: AsyncClient, d
     assert payload["access_token"]
 
 
+async def test_request_id_header_is_returned(client: AsyncClient):
+    request_id = f"req-{uuid4().hex}"
+
+    response = await client.get(
+        "/api/v1/permissions/",
+        headers={"X-Request-ID": request_id},
+    )
+
+    assert response.headers["X-Request-ID"] == request_id
+
+
 async def test_login_rejects_inactive_user(client: AsyncClient, db_session: AsyncSession):
     password = "StrongPass123!"
     user = await _create_user(

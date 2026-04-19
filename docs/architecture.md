@@ -84,6 +84,26 @@ Unit and integration tests.
 
 `request -> api endpoint -> service -> repository -> db`
 
+## Observability
+
+The API configures centralized logging in `app/core/logging_config.py`.
+
+Runtime controls:
+
+- `LOG_LEVEL`: standard Python logging level, defaults to `INFO`.
+- `LOG_FORMAT`: `plain` or `json`, defaults to `plain`.
+- `LOG_REQUESTS`: enables request access logs, defaults to `true`.
+
+Every HTTP request receives an `X-Request-ID` response header. If the client
+passes `X-Request-ID`, the same value is reused; otherwise the API generates a
+new id. The request id is attached to logs through an async context variable, so
+business logs from the same request can be correlated.
+
+Logged business events include telemetry ingestion, state evaluation, monitoring
+event creation, notification creation and email delivery, maintenance task
+changes, audit log creation, and authentication outcomes. Request bodies,
+passwords, access tokens, and SMTP secrets are intentionally not logged.
+
 ## Nearest MVP
 
 This milestone has already been passed. The project now contains implemented

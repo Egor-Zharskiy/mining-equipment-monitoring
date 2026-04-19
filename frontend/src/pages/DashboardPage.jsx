@@ -28,10 +28,8 @@ import {
   YAxis,
 } from 'recharts'
 import { fetchDashboardOverview, fetchEquipmentStatusAnalytics, fetchEventAnalytics } from '../api/dashboard'
-import { demoDashboardOverview, demoEquipmentStatusAnalytics, demoEventAnalytics, demoEvents } from '../api/demoData'
 import { fetchEvents } from '../api/events'
 import { useAuth } from '../auth/useAuth'
-import { DataFallbackNotice } from '../components/DataFallbackNotice'
 import { EmptyState } from '../components/EmptyState'
 import { PageHeader } from '../components/PageHeader'
 import { SectionCard } from '../components/SectionCard'
@@ -43,6 +41,24 @@ const statusColors = {
   normal: '#2d8d67',
   warning: '#c68d2f',
   critical: '#b24b47',
+}
+
+const emptyOverview = {
+  equipment: { total_count: 0, buckets: { warning: 0, critical: 0 } },
+  events: { total_count: 0, buckets: { warning: 0 } },
+  maintenance: { total_count: 0, buckets: { overdue: 0 } },
+  notifications: { total_count: 0, buckets: { unread: 0 } },
+}
+
+const emptyEquipmentStatus = {
+  by_status: {},
+  by_type: [],
+}
+
+const emptyEventAnalytics = {
+  period: null,
+  by_severity: {},
+  timeline: [],
 }
 
 function toDateKey(value) {
@@ -92,17 +108,19 @@ export function DashboardPage() {
     enabled: canReadEvents,
   })
 
-  const overview = overviewQuery.data ?? demoDashboardOverview
-  const equipmentStatus = statusQuery.data ?? demoEquipmentStatusAnalytics
-  const eventAnalytics = eventsAnalyticsQuery.data ?? demoEventAnalytics
-  const recentEvents = canReadEvents ? (recentEventsQuery.data ?? demoEvents.slice(0, 5)) : []
-  const usingFallback =
+  const overview = overviewQuery.data ?? emptyOverview
+  const equipmentStatus = statusQuery.data ?? emptyEquipmentStatus
+  const eventAnalytics = eventsAnalyticsQuery.data ?? emptyEventAnalytics
+  const recentEvents = canReadEvents ? (recentEventsQuery.data ?? []) : []
+  const hasDashboardError =
     overviewQuery.isError ||
     statusQuery.isError ||
     eventsAnalyticsQuery.isError ||
     (canReadEvents && recentEventsQuery.isError)
   const isInitialLoading =
-    !usingFallback &&
+    (overviewQuery.isLoading ||
+      statusQuery.isLoading ||
+      eventsAnalyticsQuery.isLoading) &&
     (!overviewQuery.data ||
       !statusQuery.data ||
       !eventsAnalyticsQuery.data)
@@ -230,9 +248,7 @@ export function DashboardPage() {
         }
       />
 
-      {usingFallback ? <DataFallbackNotice /> : null}
-      {!usingFallback &&
-      [overviewQuery, statusQuery, eventsAnalyticsQuery, recentEventsQuery].some((query) => query.isError) ? (
+      {hasDashboardError ? (
         <Alert severity="warning">
           Часть аналитических данных временно недоступна. Обновите страницу или проверьте права доступа пользователя.
         </Alert>

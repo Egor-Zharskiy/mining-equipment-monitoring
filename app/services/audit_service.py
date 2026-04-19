@@ -1,9 +1,12 @@
+import logging
 from datetime import datetime
 from uuid import UUID
 
 from app.repositories.audit_log_repository import AuditLogRepository
 
 SENSITIVE_AUDIT_FIELDS = {"password", "hashed_password", "access_token", "refresh_token", "token"}
+
+logger = logging.getLogger(__name__)
 
 
 class AuditService:
@@ -26,7 +29,7 @@ class AuditService:
         details: dict | None = None,
     ):
         sanitized_details = self._sanitize(details)
-        return await self._audit_log_repository.create(
+        audit_log = await self._audit_log_repository.create(
             actor_user_id=actor_user_id,
             action=action,
             resource_type=resource_type,
@@ -34,6 +37,18 @@ class AuditService:
             status_code=status_code,
             details=sanitized_details,
         )
+        logger.info(
+            "audit_log_created",
+            extra={
+                "audit_log_id": str(audit_log.id),
+                "actor_user_id": str(actor_user_id) if actor_user_id else None,
+                "action": action,
+                "resource_type": resource_type,
+                "resource_id": str(resource_id) if resource_id else None,
+                "status_code": status_code,
+            },
+        )
+        return audit_log
 
     async def list_audit_logs(
         self,

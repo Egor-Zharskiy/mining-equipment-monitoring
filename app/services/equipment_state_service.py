@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 from uuid import UUID
 
@@ -12,6 +13,8 @@ from app.repositories.equipment_state_repository import EquipmentStateRepository
 from app.repositories.telemetry_evaluation_repository import TelemetryEvaluationRepository
 from app.repositories.threshold_rule_repository import ThresholdRuleRepository
 from app.services.event_service import EventService
+
+logger = logging.getLogger(__name__)
 
 
 class EquipmentStateService:
@@ -56,7 +59,6 @@ class EquipmentStateService:
             critical_min=rule.critical_min,
             critical_max=rule.critical_max,
         )
-
         await self._telemetry_evaluation_repository.create(
             telemetry_reading=telemetry_reading,
             equipment=equipment,
@@ -70,6 +72,18 @@ class EquipmentStateService:
             parameter_id=parameter.id,
         )
         previous_parameter_status = parameter_state.status if parameter_state is not None else None
+        logger.info(
+            "telemetry_reading_evaluated",
+            extra={
+                "telemetry_reading_id": str(telemetry_reading.id),
+                "equipment_id": str(equipment.id),
+                "parameter_id": str(parameter.id),
+                "threshold_rule_id": str(rule.id),
+                "status": status,
+                "previous_parameter_status": previous_parameter_status,
+                "value": str(telemetry_reading.value),
+            },
+        )
         if parameter_state is None:
             await self._equipment_parameter_state_repository.create(
                 equipment=equipment,
@@ -91,6 +105,27 @@ class EquipmentStateService:
             )
         parameter_states = await self._equipment_parameter_state_repository.list_by_equipment(equipment.id)
         overall_status, warning_count, critical_count = self._derive_equipment_status(parameter_states)
+        if previous_equipment_status != overall_status:
+            logger.info(
+                "equipment_status_changed",
+                extra={
+                    "equipment_id": str(equipment.id),
+                    "previous_status": previous_equipment_status,
+                    "new_status": overall_status,
+                    "warning_count": warning_count,
+                    "critical_count": critical_count,
+                },
+            )
+        else:
+            logger.info(
+                "equipment_state_updated",
+                extra={
+                    "equipment_id": str(equipment.id),
+                    "status": overall_status,
+                    "warning_count": warning_count,
+                    "critical_count": critical_count,
+                },
+            )
 
         if previous_equipment_state is None:
             await self._equipment_state_repository.create(

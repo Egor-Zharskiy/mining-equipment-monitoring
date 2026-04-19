@@ -1,6 +1,8 @@
+import logging
+import time
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-import time
 
 from app.api.v1.audit import get_audit_service
 from app.core.profiling import log_auth_profile, profile_auth_step
@@ -14,6 +16,7 @@ from app.services.security_service import SecurityService
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/login", response_model=TokenResponse, status_code=status.HTTP_200_OK)
@@ -30,9 +33,11 @@ async def login(
         user = await service.authenticate_user(email=str(payload.email), password=payload.password)
 
     except ValueError as error:
+        logger.warning("auth_login_rejected", extra={"reason": str(error)})
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
     if user is None:
+        logger.warning("auth_login_failed", extra={"reason": "invalid_credentials"})
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",
@@ -62,6 +67,7 @@ async def login(
         email=payload.email,
         user_id=user.id,
     )
+    logger.info("auth_login_success", extra={"user_id": str(user.id)})
     return TokenResponse(
         access_token=access_token,
         user=user_payload,

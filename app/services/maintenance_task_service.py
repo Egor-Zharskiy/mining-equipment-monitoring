@@ -1,4 +1,6 @@
 
+import logging
+
 from app.core.maintenance import (
     MAINTENANCE_TASK_STATUS_CANCELLED,
     MAINTENANCE_TASK_STATUS_DONE,
@@ -14,6 +16,8 @@ from app.repositories.maintenance_task_repository import MaintenanceTaskReposito
 from app.repositories.user_repository import UserRepository
 from app.schemas.maintenance import MaintenanceTaskComplete, MaintenanceTaskCreate, MaintenanceTaskUpdate
 from app.services.notification_service import NotificationService
+
+logger = logging.getLogger(__name__)
 
 
 class MaintenanceTaskService:
@@ -75,6 +79,18 @@ class MaintenanceTaskService:
             created_by_user=created_by_user,
             assigned_to_user=assigned_to_user,
         )
+        logger.info(
+            "maintenance_task_created",
+            extra={
+                "maintenance_task_id": str(task.id),
+                "equipment_id": str(equipment.id),
+                "plan_id": str(plan.id) if plan is not None else None,
+                "created_by_user_id": str(actor_user_id),
+                "assigned_to_user_id": str(assigned_to_user.id) if assigned_to_user is not None else None,
+                "priority": task.priority,
+                "due_at": task.due_at.isoformat() if task.due_at else None,
+            },
+        )
         if self._notification_service is not None:
             await self._notification_service.notify_for_upcoming_maintenance(task)
         return task
@@ -125,6 +141,7 @@ class MaintenanceTaskService:
         if "priority" in update_data:
             priority = self._validate_priority(update_data["priority"])
 
+        previous_status = task.status
         updated_task = await self._maintenance_task_repository.update(
             task,
             status=status,
@@ -133,6 +150,20 @@ class MaintenanceTaskService:
             description=update_data["description"] if "description" in update_data else UNSET,
             due_at=update_data["due_at"] if "due_at" in update_data else UNSET,
             assigned_to_user=assigned_to_user,
+        )
+        logger.info(
+            "maintenance_task_updated",
+            extra={
+                "maintenance_task_id": str(updated_task.id),
+                "equipment_id": str(updated_task.equipment_id),
+                "previous_status": previous_status,
+                "new_status": updated_task.status,
+                "assigned_to_user_id": (
+                    str(updated_task.assigned_to_user_id)
+                    if updated_task.assigned_to_user_id is not None
+                    else None
+                ),
+            },
         )
         if self._notification_service is not None:
             await self._notification_service.notify_for_upcoming_maintenance(updated_task)
@@ -169,6 +200,16 @@ class MaintenanceTaskService:
             task,
             status=MAINTENANCE_TASK_STATUS_DONE,
             completed_at=payload.performed_at,
+        )
+        logger.info(
+            "maintenance_task_completed",
+            extra={
+                "maintenance_task_id": str(task.id),
+                "maintenance_record_id": str(record.id),
+                "equipment_id": str(task.equipment_id),
+                "performed_by_user_id": str(performed_by_user.id),
+                "performed_at": payload.performed_at.isoformat(),
+            },
         )
         return await self._maintenance_record_repository.get_by_id(record.id)
 

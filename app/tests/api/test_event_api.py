@@ -285,6 +285,49 @@ async def test_get_event_returns_existing_event(client, set_current_user):
     assert payload["equipment"]["id"] == equipment_id
 
 
+async def test_create_maintenance_task_from_event(client, set_current_user):
+    await set_current_user(
+        {
+            "equipment.read",
+            "equipment.manage",
+            "telemetry.create",
+            "telemetry.read",
+            "threshold_rules.manage",
+            "threshold_rules.read",
+            "events.read",
+            "maintenance.manage",
+        }
+    )
+
+    equipment_type_id = await _create_equipment_type(client)
+    parameter_id = await _create_parameter(client, "event_task", "Температура гидравлики")
+    await _create_binding(client, equipment_type_id, parameter_id)
+    await _create_threshold_rule(client, equipment_type_id, parameter_id, warning_max="80.0", critical_max="95.0")
+    equipment_id = await _create_equipment(client, equipment_type_id)
+
+    await _create_reading(client, equipment_id, parameter_id, "99.0", 1)
+
+    list_response = await client.get(f"/api/v1/events/?equipment_id={equipment_id}&event_type=parameter_critical")
+    assert list_response.status_code == 200
+    event = list_response.json()[0]
+
+    response = await client.post(
+        f"/api/v1/events/{event['id']}/maintenance-task",
+        json={
+            "title": "Проверить гидравлику после critical",
+            "description": "Создано из критического события мониторинга.",
+            "priority": "high",
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["equipment"]["id"] == equipment_id
+    assert payload["title"] == "Проверить гидравлику после critical"
+    assert payload["priority"] == "high"
+    assert payload["status"] == "open"
+
+
 async def test_event_list_requires_permission(client, set_current_user):
     await set_current_user(set())
 
@@ -301,6 +344,18 @@ async def test_get_event_requires_permission(client, set_current_user):
 
     assert response.status_code == 403
     assert response.json()["detail"] == "Missing permissions: events.read."
+
+
+async def test_create_maintenance_task_from_event_requires_permissions(client, set_current_user):
+    await set_current_user({"events.read"})
+
+    response = await client.post(
+        f"/api/v1/events/{uuid4()}/maintenance-task",
+        json={"title": "Недостаточно прав", "priority": "high"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Missing permissions: maintenance.manage."
 
 
 async def test_get_event_returns_404_for_unknown_id(client, set_current_user):
