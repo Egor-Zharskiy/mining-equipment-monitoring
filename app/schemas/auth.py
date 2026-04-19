@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from app.schemas.user import UserRead
+
 
 class LoginRequest(BaseModel):
     """Credentials used to request an access token."""
@@ -13,3 +15,4 @@ class TokenResponse(BaseModel):
 
     access_token: str
     token_type: str = "bearer"
+    user: UserRead

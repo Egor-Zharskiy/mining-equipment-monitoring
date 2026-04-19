@@ -3,10 +3,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.audit import get_audit_service
 from app.db.session import get_async_session
 from app.dependencies.auth import require_permissions
 from app.repositories.parameter_repository import ParameterRepository
 from app.schemas.parameter import ParameterCreate, ParameterRead, ParameterUpdate
+from app.services.audit_service import AuditService
 from app.services.parameter_service import ParameterService
 
 router = APIRouter(prefix="/parameters", tags=["Parameters"])
@@ -27,6 +29,16 @@ async def create_parameter(
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="create",
+        resource_type="parameters",
+        resource_id=parameter.id,
+        status_code=status.HTTP_201_CREATED,
+        details=AuditService.build_details(
+            request_data=payload.model_dump(mode="json", exclude_none=True),
+        ),
+    )
     return ParameterRead.model_validate(parameter)
 
 
@@ -78,6 +90,17 @@ async def update_parameter(
     if parameter is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parameter not found.")
 
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="update",
+        resource_type="parameters",
+        resource_id=parameter.id,
+        status_code=status.HTTP_200_OK,
+        details=AuditService.build_details(
+            request_data=payload.model_dump(mode="json", exclude_none=True),
+        ),
+    )
+
     return ParameterRead.model_validate(parameter)
 
 
@@ -98,3 +121,11 @@ async def delete_parameter(
 
     if parameter is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parameter not found.")
+
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="delete",
+        resource_type="parameters",
+        resource_id=parameter.id,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )

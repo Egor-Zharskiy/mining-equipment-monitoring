@@ -25,14 +25,15 @@ class EquipmentType(Base):
         onupdate=func.now(),
     )
 
-    equipment: Mapped[list["Equipment"]] = relationship(back_populates="equipment_type", lazy="selectin")
+    equipment: Mapped[list["Equipment"]] = relationship(back_populates="equipment_type")
     parameter_bindings: Mapped[list["EquipmentTypeParameter"]] = relationship(
         back_populates="equipment_type",
-        lazy="selectin",
         cascade="all, delete-orphan",
     )
     threshold_rules: Mapped[list["ThresholdRule"]] = relationship(
         back_populates="equipment_type",
-        lazy="selectin",
         cascade="all, delete-orphan",
+    )
+    maintenance_plans: Mapped[list["MaintenancePlan"]] = relationship(
+        back_populates="equipment_type",
     )

@@ -2,9 +2,11 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload
 
 from app.models import Equipment, EquipmentType
+
+UNSET = object()
 
 
 class EquipmentRepository:
@@ -49,7 +51,7 @@ class EquipmentRepository:
 
         result = await self._session.execute(
             select(Equipment)
-            .options(selectinload(Equipment.equipment_type))
+            .options(joinedload(Equipment.equipment_type))
             .where(Equipment.id == equipment_id)
         )
         return result.scalar_one_or_none()
@@ -59,7 +61,7 @@ class EquipmentRepository:
 
         result = await self._session.execute(
             select(Equipment)
-            .options(selectinload(Equipment.equipment_type))
+            .options(joinedload(Equipment.equipment_type))
             .where(Equipment.code == code)
         )
         return result.scalar_one_or_none()
@@ -69,7 +71,7 @@ class EquipmentRepository:
 
         result = await self._session.execute(
             select(Equipment)
-            .options(selectinload(Equipment.equipment_type))
+            .options(joinedload(Equipment.equipment_type))
             .where(Equipment.serial_number == serial_number)
         )
         return result.scalar_one_or_none()
@@ -79,7 +81,7 @@ class EquipmentRepository:
 
         result = await self._session.execute(
             select(Equipment)
-            .options(selectinload(Equipment.equipment_type))
+            .options(joinedload(Equipment.equipment_type))
             .order_by(Equipment.name)
         )
         return list(result.scalars().all())
@@ -88,33 +90,33 @@ class EquipmentRepository:
         self,
         equipment: Equipment,
         *,
-        name: str | None = None,
-        code: str | None = None,
-        serial_number: str | None = None,
-        equipment_type: EquipmentType | None = None,
-        location: str | None = None,
-        description: str | None = None,
-        specifications: dict | None = None,
-        is_active: bool | None = None,
+        name: str | object = UNSET,
+        code: str | object = UNSET,
+        serial_number: str | None | object = UNSET,
+        equipment_type: EquipmentType | object = UNSET,
+        location: str | object = UNSET,
+        description: str | None | object = UNSET,
+        specifications: dict | None | object = UNSET,
+        is_active: bool | object = UNSET,
     ) -> Equipment:
         """Update equipment and return the refreshed entity."""
 
-        if name is not None:
-            equipment.name = name
-        if code is not None:
-            equipment.code = code
-        if serial_number is not None:
-            equipment.serial_number = serial_number
-        if equipment_type is not None:
-            equipment.equipment_type = equipment_type
-        if location is not None:
-            equipment.location = location
-        if description is not None:
-            equipment.description = description
-        if specifications is not None:
-            equipment.specifications = specifications
-        if is_active is not None:
-            equipment.is_active = is_active
+        if name is not UNSET:
+            equipment.name = name  # type: ignore[assignment]
+        if code is not UNSET:
+            equipment.code = code  # type: ignore[assignment]
+        if serial_number is not UNSET:
+            equipment.serial_number = serial_number  # type: ignore[assignment]
+        if equipment_type is not UNSET:
+            equipment.equipment_type = equipment_type  # type: ignore[assignment]
+        if location is not UNSET:
+            equipment.location = location  # type: ignore[assignment]
+        if description is not UNSET:
+            equipment.description = description  # type: ignore[assignment]
+        if specifications is not UNSET:
+            equipment.specifications = specifications  # type: ignore[assignment]
+        if is_active is not UNSET:
+            equipment.is_active = is_active  # type: ignore[assignment]
 
         await self._session.flush()
         await self._session.refresh(equipment)

@@ -31,5 +31,21 @@ class User(Base):
     roles: Mapped[list["Role"]] = relationship(
         secondary="user_roles",
         back_populates="users",
-        lazy="selectin",
+    )
+    created_maintenance_tasks: Mapped[list["MaintenanceTask"]] = relationship(
+        foreign_keys="MaintenanceTask.created_by_user_id",
+        back_populates="created_by_user",
+    )
+    assigned_maintenance_tasks: Mapped[list["MaintenanceTask"]] = relationship(
+        foreign_keys="MaintenanceTask.assigned_to_user_id",
+        back_populates="assigned_to_user",
+    )
+    performed_maintenance_records: Mapped[list["MaintenanceRecord"]] = relationship(
+        back_populates="performed_by_user",
+    )
+    notifications: Mapped[list["Notification"]] = relationship(
+        back_populates="recipient_user",
+    )
+    audit_logs: Mapped[list["AuditLog"]] = relationship(
+        back_populates="actor_user",
     )

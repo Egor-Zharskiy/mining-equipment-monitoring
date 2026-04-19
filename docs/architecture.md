@@ -18,7 +18,7 @@
 - `Pydantic Settings` for configuration
 - `pytest` for testing
 
-## Target Structure
+## Current Structure
 
 ```text
 app/
@@ -27,7 +27,12 @@ app/
       endpoints/
       router.py
   core/
-    settings.py
+    monitoring.py
+    events.py
+  config/
+    app_config.py
+    auth_config.py
+    db_config.py
   db/
     base.py
     session.py
@@ -81,19 +86,22 @@ Unit and integration tests.
 
 ## Nearest MVP
 
-1. Introduce a single `Settings` entry point.
-2. Move database session management into `app/db/session.py`.
-3. Add `api/v1/router.py` as the route composition entry point.
-4. Extract the first domain module, for example:
-   - users
-   - equipment
-   - telemetry
-   - events and alerts
-5. Add Alembic migrations.
-6. Add tests for core endpoints and services.
+This milestone has already been passed. The project now contains implemented
+stages for:
+
+1. access control
+2. equipment registry
+3. monitoring parameter catalog
+4. threshold rules
+5. telemetry ingestion
+6. equipment state evaluation
+7. events
 
 ## Current State
 
-- The project already contains `main.py`, `db.py`, a base route, and one user ORM model.
-- A local `.venv` environment was created with Python `3.12.0`.
-- The new structure scaffold was added without removing existing files so migration can happen incrementally.
+- The application is composed through `main.py` and `app/api/v1/router.py`.
+- Database access is centralized in `app/db/session.py`.
+- Configuration is split into `app/config/*`.
+- The current implemented business modules are users/RBAC, equipment registry,
+  monitoring parameters, threshold rules, telemetry readings, equipment states,
+  and events.

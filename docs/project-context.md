@@ -91,6 +91,14 @@ The core of the system is:
 - Equipment registry: equipment types and equipment
 - Monitoring parameter catalog: parameters and equipment type parameter bindings
 - Threshold rules: per-equipment-type parameter thresholds with validation and RBAC
+- Telemetry ingestion: raw telemetry readings API with validation and history storage
+- Equipment state evaluation: metric status calculation and current equipment state snapshots
+- Events: automatic monitoring event journal based on state transitions
+- Maintenance: maintenance plans, maintenance tasks, and maintenance history records
+- Notifications: internal and email-channel notifications for important events and upcoming maintenance
+- SMTP email delivery for email-channel notifications when mail delivery is enabled in environment configuration
+- Analytics: dashboard endpoints for overview, equipment state distribution, event trends, telemetry history, maintenance workload, and notification summaries
+- Audit: automatic audit log records for important successful write actions plus filtered audit history API
 
 ## Important Domain Rules
 - equipment belongs to an equipment type

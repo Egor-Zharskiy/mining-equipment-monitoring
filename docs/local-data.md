@@ -48,3 +48,20 @@ existing `equipment_type_parameters` bindings.
 ### Stage 4 Coverage in Local DB
 - Threshold rules were created for all 20 current equipment type parameter bindings.
 - Human-readable values in local demo data remain in Russian.
+
+## 2026-03-31 Stage 5 Manual Seed
+
+The local database was manually populated with a minimal set of raw telemetry
+history records for local API checks.
+
+### Telemetry Readings
+- `Буровая установка СБШ-01` (`DR-001`) — `temperature` = `72.5000`
+- `Дробилка КСД-01` (`CR-001`) — `vibration` = `6.8000`
+- `Самосвал БЕЛАЗ-01` (`HT-001`) — `fuel_level` = `58.0000`
+- `Экскаватор ЭКГ-01` (`EXC-001`) — `hydraulic_temperature` = `68.2000`
+
+### Notes
+- Data was inserted directly into the local database without Alembic migration.
+- Inserts were made idempotent by fixed record identifiers to avoid duplicates on repeated execution.
+- Each telemetry record uses an existing `equipment` and a parameter already assigned through `equipment_type_parameters`.
+- The current local database state contains 4 telemetry readings.

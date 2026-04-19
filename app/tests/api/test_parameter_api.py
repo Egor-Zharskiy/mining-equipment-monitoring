@@ -7,7 +7,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_parameter_crud_flow(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
 
     create_response = await client.post(
         "/api/v1/parameters/",
@@ -55,7 +55,7 @@ async def test_parameter_crud_flow(client, set_current_user):
 
 
 async def test_parameter_create_requires_manage_permission(client, set_current_user):
-    set_current_user({"equipment.read"})
+    await set_current_user({"equipment.read"})
 
     response = await client.post(
         "/api/v1/parameters/",
@@ -73,7 +73,7 @@ async def test_parameter_create_requires_manage_permission(client, set_current_u
 
 
 async def test_parameter_list_requires_read_permission(client, set_current_user):
-    set_current_user(set())
+    await set_current_user(set())
 
     response = await client.get("/api/v1/parameters/")
 
@@ -82,7 +82,7 @@ async def test_parameter_list_requires_read_permission(client, set_current_user)
 
 
 async def test_parameter_duplicate_code_returns_400(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
     code = f"vibration_{uuid4().hex[:8]}"
 
     first_response = await client.post(
@@ -113,7 +113,7 @@ async def test_parameter_duplicate_code_returns_400(client, set_current_user):
 
 
 async def test_get_parameter_returns_404_for_unknown_id(client, set_current_user):
-    set_current_user({"equipment.read"})
+    await set_current_user({"equipment.read"})
 
     response = await client.get(f"/api/v1/parameters/{uuid4()}")
 
@@ -122,7 +122,7 @@ async def test_get_parameter_returns_404_for_unknown_id(client, set_current_user
 
 
 async def test_update_parameter_returns_404_for_unknown_id(client, set_current_user):
-    set_current_user({"equipment.manage"})
+    await set_current_user({"equipment.manage"})
 
     response = await client.patch(
         f"/api/v1/parameters/{uuid4()}",
@@ -134,7 +134,7 @@ async def test_update_parameter_returns_404_for_unknown_id(client, set_current_u
 
 
 async def test_delete_parameter_returns_404_for_unknown_id(client, set_current_user):
-    set_current_user({"equipment.manage"})
+    await set_current_user({"equipment.manage"})
 
     response = await client.delete(f"/api/v1/parameters/{uuid4()}")
 
@@ -142,8 +142,37 @@ async def test_delete_parameter_returns_404_for_unknown_id(client, set_current_u
     assert response.json()["detail"] == "Parameter not found."
 
 
+async def test_parameter_update_can_clear_nullable_fields(client, set_current_user):
+    await set_current_user({"equipment.read", "equipment.manage"})
+
+    create_response = await client.post(
+        "/api/v1/parameters/",
+        json={
+            "code": f"clear_{uuid4().hex[:8]}",
+            "name": "Clearable Parameter",
+            "unit": "bar",
+            "description": "Будет очищено",
+            "is_active": True,
+        },
+    )
+    parameter_id = create_response.json()["id"]
+
+    update_response = await client.patch(
+        f"/api/v1/parameters/{parameter_id}",
+        json={
+            "unit": None,
+            "description": None,
+        },
+    )
+
+    assert update_response.status_code == 200
+    payload = update_response.json()
+    assert payload["unit"] is None
+    assert payload["description"] is None
+
+
 async def test_equipment_type_parameter_binding_flow(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
 
     type_response = await client.post(
         "/api/v1/equipment-types/",
@@ -202,7 +231,7 @@ async def test_equipment_type_parameter_binding_flow(client, set_current_user):
 
 
 async def test_equipment_type_parameter_duplicate_binding_returns_400(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
 
     type_response = await client.post(
         "/api/v1/equipment-types/",
@@ -250,7 +279,7 @@ async def test_equipment_type_parameter_duplicate_binding_returns_400(client, se
 
 
 async def test_equipment_type_parameter_create_requires_manage_permission(client, set_current_user):
-    set_current_user({"equipment.read"})
+    await set_current_user({"equipment.read"})
 
     response = await client.post(
         "/api/v1/equipment-type-parameters/",
@@ -266,7 +295,7 @@ async def test_equipment_type_parameter_create_requires_manage_permission(client
 
 
 async def test_equipment_type_parameter_create_rejects_unknown_equipment_type(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
 
     parameter_response = await client.post(
         "/api/v1/parameters/",
@@ -295,7 +324,7 @@ async def test_equipment_type_parameter_create_rejects_unknown_equipment_type(cl
 
 
 async def test_equipment_type_parameter_create_rejects_unknown_parameter(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
 
     type_response = await client.post(
         "/api/v1/equipment-types/",
@@ -322,7 +351,7 @@ async def test_equipment_type_parameter_create_rejects_unknown_parameter(client,
 
 
 async def test_equipment_type_parameter_list_filters_by_parameter_id(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
 
     first_type_response = await client.post(
         "/api/v1/equipment-types/",
@@ -409,7 +438,7 @@ async def test_equipment_type_parameter_list_filters_by_parameter_id(client, set
 
 
 async def test_get_equipment_type_parameter_returns_404_for_unknown_id(client, set_current_user):
-    set_current_user({"equipment.read"})
+    await set_current_user({"equipment.read"})
 
     response = await client.get(f"/api/v1/equipment-type-parameters/{uuid4()}")
 
@@ -418,7 +447,7 @@ async def test_get_equipment_type_parameter_returns_404_for_unknown_id(client, s
 
 
 async def test_delete_equipment_type_parameter_returns_404_for_unknown_id(client, set_current_user):
-    set_current_user({"equipment.manage"})
+    await set_current_user({"equipment.manage"})
 
     response = await client.delete(f"/api/v1/equipment-type-parameters/{uuid4()}")
 
@@ -427,7 +456,7 @@ async def test_delete_equipment_type_parameter_returns_404_for_unknown_id(client
 
 
 async def test_equipment_type_parameter_list_requires_read_permission(client, set_current_user):
-    set_current_user(set())
+    await set_current_user(set())
 
     response = await client.get("/api/v1/equipment-type-parameters/")
 
@@ -436,7 +465,7 @@ async def test_equipment_type_parameter_list_requires_read_permission(client, se
 
 
 async def test_parameter_delete_rejects_assigned_bindings(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
 
     type_response = await client.post(
         "/api/v1/equipment-types/",

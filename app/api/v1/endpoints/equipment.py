@@ -3,11 +3,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.audit import get_audit_service
 from app.db.session import get_async_session
 from app.dependencies.auth import require_permissions
 from app.repositories.equipment_repository import EquipmentRepository
 from app.repositories.equipment_type_repository import EquipmentTypeRepository
 from app.schemas.equipment import EquipmentCreate, EquipmentRead, EquipmentUpdate
+from app.services.audit_service import AuditService
 from app.services.equipment_service import EquipmentService
 
 router = APIRouter(prefix="/equipment", tags=["Equipment"])
@@ -28,6 +30,16 @@ async def create_equipment(
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="create",
+        resource_type="equipment",
+        resource_id=equipment.id,
+        status_code=status.HTTP_201_CREATED,
+        details=AuditService.build_details(
+            request_data=payload.model_dump(mode="json", exclude_none=True),
+        ),
+    )
     return EquipmentRead.model_validate(equipment)
 
 
@@ -79,6 +91,16 @@ async def update_equipment(
     if equipment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Equipment not found.")
 
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="update",
+        resource_type="equipment",
+        resource_id=equipment.id,
+        status_code=status.HTTP_200_OK,
+        details=AuditService.build_details(
+            request_data=payload.model_dump(mode="json", exclude_none=True),
+        ),
+    )
     return EquipmentRead.model_validate(equipment)
 
 
@@ -95,3 +117,11 @@ async def delete_equipment(
 
     if equipment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Equipment not found.")
+
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="delete",
+        resource_type="equipment",
+        resource_id=equipment.id,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )

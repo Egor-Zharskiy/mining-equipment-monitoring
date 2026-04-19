@@ -2,7 +2,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload
 
 from app.models import EquipmentType, Parameter, ThresholdRule
 
@@ -50,8 +50,8 @@ class ThresholdRuleRepository:
         result = await self._session.execute(
             select(ThresholdRule)
             .options(
-                selectinload(ThresholdRule.equipment_type),
-                selectinload(ThresholdRule.parameter),
+                joinedload(ThresholdRule.equipment_type),
+                joinedload(ThresholdRule.parameter),
             )
             .where(ThresholdRule.id == rule_id)
         )
@@ -68,8 +68,8 @@ class ThresholdRuleRepository:
         result = await self._session.execute(
             select(ThresholdRule)
             .options(
-                selectinload(ThresholdRule.equipment_type),
-                selectinload(ThresholdRule.parameter),
+                joinedload(ThresholdRule.equipment_type),
+                joinedload(ThresholdRule.parameter),
             )
             .where(ThresholdRule.equipment_type_id == equipment_type_id)
             .where(ThresholdRule.parameter_id == parameter_id)
@@ -85,8 +85,8 @@ class ThresholdRuleRepository:
         """Return threshold rules optionally filtered by equipment type or parameter."""
 
         query = select(ThresholdRule).options(
-            selectinload(ThresholdRule.equipment_type),
-            selectinload(ThresholdRule.parameter),
+            joinedload(ThresholdRule.equipment_type),
+            joinedload(ThresholdRule.parameter),
         )
 
         if equipment_type_id is not None:

@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import EquipmentTypeParameter, Parameter
 
+UNSET = object()
+
 
 class ParameterRepository:
     """Handles database access for monitoring parameter entities."""
@@ -59,24 +61,24 @@ class ParameterRepository:
         self,
         parameter: Parameter,
         *,
-        code: str | None = None,
-        name: str | None = None,
-        unit: str | None = None,
-        description: str | None = None,
-        is_active: bool | None = None,
+        code: str | object = UNSET,
+        name: str | object = UNSET,
+        unit: str | None | object = UNSET,
+        description: str | None | object = UNSET,
+        is_active: bool | object = UNSET,
     ) -> Parameter:
         """Update a parameter and return the refreshed entity."""
 
-        if code is not None:
-            parameter.code = code
-        if name is not None:
-            parameter.name = name
-        if unit is not None:
-            parameter.unit = unit
-        if description is not None:
-            parameter.description = description
-        if is_active is not None:
-            parameter.is_active = is_active
+        if code is not UNSET:
+            parameter.code = code  # type: ignore[assignment]
+        if name is not UNSET:
+            parameter.name = name  # type: ignore[assignment]
+        if unit is not UNSET:
+            parameter.unit = unit  # type: ignore[assignment]
+        if description is not UNSET:
+            parameter.description = description  # type: ignore[assignment]
+        if is_active is not UNSET:
+            parameter.is_active = is_active  # type: ignore[assignment]
 
         await self._session.flush()
         await self._session.refresh(parameter)

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from app.repositories.equipment_repository import EquipmentRepository
+from app.repositories.equipment_repository import EquipmentRepository, UNSET
 from app.repositories.equipment_type_repository import EquipmentTypeRepository
 from app.schemas.equipment import EquipmentCreate, EquipmentUpdate
 
@@ -62,32 +62,38 @@ class EquipmentService:
         if equipment is None:
             return None
 
-        if payload.code is not None and payload.code != equipment.code:
-            existing_code = await self._equipment_repository.get_by_code(payload.code)
+        update_data = payload.model_dump(exclude_unset=True)
+
+        if "code" in update_data and update_data["code"] != equipment.code:
+            existing_code = await self._equipment_repository.get_by_code(update_data["code"])
             if existing_code is not None:
-                raise ValueError(f"Equipment with code '{payload.code}' already exists.")
+                raise ValueError(f"Equipment with code '{update_data['code']}' already exists.")
 
-        if payload.serial_number is not None and payload.serial_number != equipment.serial_number:
-            existing_serial_number = await self._equipment_repository.get_by_serial_number(payload.serial_number)
+        if (
+            "serial_number" in update_data
+            and update_data["serial_number"] is not None
+            and update_data["serial_number"] != equipment.serial_number
+        ):
+            existing_serial_number = await self._equipment_repository.get_by_serial_number(update_data["serial_number"])
             if existing_serial_number is not None:
-                raise ValueError(f"Equipment with serial number '{payload.serial_number}' already exists.")
+                raise ValueError(f"Equipment with serial number '{update_data['serial_number']}' already exists.")
 
-        equipment_type = None
-        if payload.equipment_type_id is not None:
-            equipment_type = await self._equipment_type_repository.get_by_id(payload.equipment_type_id)
+        equipment_type = UNSET
+        if "equipment_type_id" in update_data:
+            equipment_type = await self._equipment_type_repository.get_by_id(update_data["equipment_type_id"])
             if equipment_type is None:
                 raise ValueError("Equipment type was not found.")
 
         return await self._equipment_repository.update(
             equipment,
-            name=payload.name,
-            code=payload.code,
-            serial_number=payload.serial_number,
+            name=update_data["name"] if "name" in update_data else UNSET,
+            code=update_data["code"] if "code" in update_data else UNSET,
+            serial_number=update_data["serial_number"] if "serial_number" in update_data else UNSET,
             equipment_type=equipment_type,
-            location=payload.location,
-            description=payload.description,
-            specifications=payload.specifications,
-            is_active=payload.is_active,
+            location=update_data["location"] if "location" in update_data else UNSET,
+            description=update_data["description"] if "description" in update_data else UNSET,
+            specifications=update_data["specifications"] if "specifications" in update_data else UNSET,
+            is_active=update_data["is_active"] if "is_active" in update_data else UNSET,
         )
 
     async def delete_equipment(self, equipment_id: UUID):

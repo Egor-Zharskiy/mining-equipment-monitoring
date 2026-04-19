@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Equipment, EquipmentType
 
+UNSET = object()
+
 
 class EquipmentTypeRepository:
     """Handles database access for equipment type entities."""
@@ -51,18 +53,18 @@ class EquipmentTypeRepository:
         self,
         equipment_type: EquipmentType,
         *,
-        name: str | None = None,
-        description: str | None = None,
-        is_active: bool | None = None,
+        name: str | object = UNSET,
+        description: str | None | object = UNSET,
+        is_active: bool | object = UNSET,
     ) -> EquipmentType:
         """Update an equipment type and return the refreshed entity."""
 
-        if name is not None:
-            equipment_type.name = name
-        if description is not None:
-            equipment_type.description = description
-        if is_active is not None:
-            equipment_type.is_active = is_active
+        if name is not UNSET:
+            equipment_type.name = name  # type: ignore[assignment]
+        if description is not UNSET:
+            equipment_type.description = description  # type: ignore[assignment]
+        if is_active is not UNSET:
+            equipment_type.is_active = is_active  # type: ignore[assignment]
 
         await self._session.flush()
         await self._session.refresh(equipment_type)

@@ -29,9 +29,13 @@ class Parameter(Base):
 
     equipment_type_bindings: Mapped[list["EquipmentTypeParameter"]] = relationship(
         back_populates="parameter",
-        lazy="selectin",
     )
     threshold_rules: Mapped[list["ThresholdRule"]] = relationship(
         back_populates="parameter",
-        lazy="selectin",
+    )
+    telemetry_readings: Mapped[list["TelemetryReading"]] = relationship(
+        back_populates="parameter",
+    )
+    parameter_states: Mapped[list["EquipmentParameterState"]] = relationship(
+        back_populates="parameter",
     )

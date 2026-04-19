@@ -7,7 +7,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_equipment_type_crud_flow(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
 
     create_response = await client.post(
         "/api/v1/equipment-types/",
@@ -48,7 +48,7 @@ async def test_equipment_type_crud_flow(client, set_current_user):
 
 
 async def test_equipment_type_create_requires_manage_permission(client, set_current_user):
-    set_current_user({"equipment.read"})
+    await set_current_user({"equipment.read"})
 
     response = await client.post(
         "/api/v1/equipment-types/",
@@ -64,7 +64,7 @@ async def test_equipment_type_create_requires_manage_permission(client, set_curr
 
 
 async def test_equipment_type_duplicate_name_returns_400(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
     name = f"Duplicate Type {uuid4().hex[:8]}"
 
     first_response = await client.post(
@@ -83,7 +83,7 @@ async def test_equipment_type_duplicate_name_returns_400(client, set_current_use
 
 
 async def test_equipment_type_delete_rejects_linked_equipment(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
 
     type_response = await client.post(
         "/api/v1/equipment-types/",
@@ -116,7 +116,7 @@ async def test_equipment_type_delete_rejects_linked_equipment(client, set_curren
 
 
 async def test_equipment_crud_flow(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
 
     type_response = await client.post(
         "/api/v1/equipment-types/",
@@ -178,7 +178,7 @@ async def test_equipment_crud_flow(client, set_current_user):
 
 
 async def test_equipment_create_requires_manage_permission(client, set_current_user):
-    set_current_user({"equipment.read"})
+    await set_current_user({"equipment.read"})
 
     response = await client.post(
         "/api/v1/equipment/",
@@ -199,7 +199,7 @@ async def test_equipment_create_requires_manage_permission(client, set_current_u
 
 
 async def test_equipment_create_with_unknown_type_returns_400(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
 
     response = await client.post(
         "/api/v1/equipment/",
@@ -220,7 +220,7 @@ async def test_equipment_create_with_unknown_type_returns_400(client, set_curren
 
 
 async def test_equipment_create_duplicate_code_returns_400(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage"})
+    await set_current_user({"equipment.read", "equipment.manage"})
 
     type_response = await client.post(
         "/api/v1/equipment-types/",
@@ -264,3 +264,69 @@ async def test_equipment_create_duplicate_code_returns_400(client, set_current_u
 
     assert second_response.status_code == 400
     assert second_response.json()["detail"] == f"Equipment with code '{duplicate_code}' already exists."
+
+
+async def test_equipment_type_update_can_clear_description(client, set_current_user):
+    await set_current_user({"equipment.read", "equipment.manage"})
+
+    create_response = await client.post(
+        "/api/v1/equipment-types/",
+        json={
+            "name": f"Clear Description Type {uuid4().hex[:8]}",
+            "description": "Будет очищено",
+            "is_active": True,
+        },
+    )
+    equipment_type_id = create_response.json()["id"]
+
+    update_response = await client.patch(
+        f"/api/v1/equipment-types/{equipment_type_id}",
+        json={"description": None},
+    )
+
+    assert update_response.status_code == 200
+    assert update_response.json()["description"] is None
+
+
+async def test_equipment_update_can_clear_nullable_fields(client, set_current_user):
+    await set_current_user({"equipment.read", "equipment.manage"})
+
+    type_response = await client.post(
+        "/api/v1/equipment-types/",
+        json={
+            "name": f"Clearable Equipment Type {uuid4().hex[:8]}",
+            "description": "Тип для nullable полей",
+            "is_active": True,
+        },
+    )
+    equipment_type_id = type_response.json()["id"]
+
+    create_response = await client.post(
+        "/api/v1/equipment/",
+        json={
+            "name": "Clearable Equipment",
+            "code": f"CLR-{uuid4().hex[:8]}",
+            "serial_number": f"CLS-{uuid4().hex[:8]}",
+            "equipment_type_id": equipment_type_id,
+            "location": "North pit",
+            "description": "Будет очищено",
+            "specifications": {"power_kw": 220},
+            "is_active": True,
+        },
+    )
+    equipment_id = create_response.json()["id"]
+
+    update_response = await client.patch(
+        f"/api/v1/equipment/{equipment_id}",
+        json={
+            "serial_number": None,
+            "description": None,
+            "specifications": None,
+        },
+    )
+
+    assert update_response.status_code == 200
+    payload = update_response.json()
+    assert payload["serial_number"] is None
+    assert payload["description"] is None
+    assert payload["specifications"] is None

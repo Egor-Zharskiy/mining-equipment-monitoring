@@ -104,6 +104,9 @@ Implemented.
 ### Expected Result
 The system accumulates metric history.
 
+### Status
+Implemented.
+
 ---
 
 ## Stage 6 — Equipment State Evaluation
@@ -122,6 +125,9 @@ The system accumulates metric history.
 ### Expected Result
 The system becomes a true monitoring system, not just storage.
 
+### Status
+Implemented.
+
 ---
 
 ## Stage 7 — Events
@@ -138,6 +144,9 @@ The system becomes a true monitoring system, not just storage.
 
 ### Expected Result
 The system provides a business-meaningful event journal.
+
+### Status
+Implemented.
 
 ---
 
@@ -156,6 +165,9 @@ The system provides a business-meaningful event journal.
 ### Expected Result
 Monitoring is connected with operational maintenance workflows.
 
+### Status
+Implemented.
+
 ---
 
 ## Stage 9 — Notifications
@@ -173,6 +185,13 @@ Monitoring is connected with operational maintenance workflows.
 ### Expected Result
 The system not only detects issues but also informs responsible users.
 
+### Status
+Implemented.
+
+Email-channel notifications are stored in the database and can be delivered
+through SMTP when `MAIL_ENABLED=true`. Without SMTP configuration, the system
+keeps email notification records but does not contact an external mail server.
+
 ---
 
 ## Stage 10 — Analytics
@@ -187,6 +206,9 @@ The system not only detects issues but also informs responsible users.
 ### Expected Result
 Frontend can display useful dashboards and trends.
 
+### Status
+Implemented.
+
 ---
 
 ## Stage 11 — Audit
@@ -199,6 +221,9 @@ Frontend can display useful dashboards and trends.
 
 ### Expected Result
 Administrative actions become traceable.
+
+### Status
+Implemented.
 
 ---
 

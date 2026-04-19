@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from app.repositories.equipment_type_repository import EquipmentTypeRepository
+from app.repositories.equipment_type_repository import EquipmentTypeRepository, UNSET
 from app.schemas.equipment_type import EquipmentTypeCreate, EquipmentTypeUpdate
 
 
@@ -42,16 +42,18 @@ class EquipmentTypeService:
         if equipment_type is None:
             return None
 
-        if payload.name is not None and payload.name != equipment_type.name:
-            existing_type = await self._equipment_type_repository.get_by_name(payload.name)
+        update_data = payload.model_dump(exclude_unset=True)
+
+        if "name" in update_data and update_data["name"] != equipment_type.name:
+            existing_type = await self._equipment_type_repository.get_by_name(update_data["name"])
             if existing_type is not None:
-                raise ValueError(f"Equipment type with name '{payload.name}' already exists.")
+                raise ValueError(f"Equipment type with name '{update_data['name']}' already exists.")
 
         return await self._equipment_type_repository.update(
             equipment_type,
-            name=payload.name,
-            description=payload.description,
-            is_active=payload.is_active,
+            name=update_data["name"] if "name" in update_data else UNSET,
+            description=update_data["description"] if "description" in update_data else UNSET,
+            is_active=update_data["is_active"] if "is_active" in update_data else UNSET,
         )
 
     async def delete_equipment_type(self, equipment_type_id: UUID):

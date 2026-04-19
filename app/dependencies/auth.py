@@ -1,3 +1,4 @@
+import time
 from collections.abc import Callable
 from uuid import UUID
 
@@ -6,6 +7,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.profiling import log_auth_profile, profile_auth_step
 from app.db.session import get_async_session
 from app.repositories.user_repository import UserRepository
 from app.services.security_service import SecurityService
@@ -19,11 +21,13 @@ async def get_current_user(
 ):
     """Resolve the current authenticated user from a bearer token."""
 
+    total_start = time.perf_counter()
     token = credentials.credentials
 
     try:
-        payload = SecurityService.decode_access_token(token)
-        user_id = UUID(payload["sub"])
+        with profile_auth_step("auth.get_current_user.decode_access_token"):
+            payload = SecurityService.decode_access_token(token)
+            user_id = UUID(payload["sub"])
     except (jwt.InvalidTokenError, KeyError, ValueError) as error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -36,7 +40,17 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authenticated user was not found.",
         )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authenticated user is inactive.",
+        )
 
+    log_auth_profile(
+        "auth.get_current_user.total",
+        time.perf_counter() - total_start,
+        user_id=user.id,
+    )
     return user
 
 

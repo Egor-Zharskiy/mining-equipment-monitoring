@@ -3,11 +3,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.audit import get_audit_service
 from app.dependencies.auth import get_current_user, require_permissions
 from app.db.session import get_async_session
 from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate, UserRead, UserSelfUpdate, UserUpdate
+from app.services.audit_service import AuditService
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -28,6 +30,16 @@ async def create_user(
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="create",
+        resource_type="users",
+        resource_id=user.id,
+        status_code=status.HTTP_201_CREATED,
+        details=AuditService.build_details(
+            request_data=payload.model_dump(mode="json", exclude_none=True),
+        ),
+    )
     return UserRead.model_validate(user)
 
 
@@ -70,6 +82,17 @@ async def update_my_profile(
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="update",
+        resource_type="users",
+        resource_id=user.id,
+        status_code=status.HTTP_200_OK,
+        details=AuditService.build_details(
+            request_data=payload.model_dump(mode="json", exclude_none=True),
+            extra={"target": "self"},
+        ),
+    )
     return UserRead.model_validate(user)
 
 
@@ -87,6 +110,16 @@ async def get_user(
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="update",
+        resource_type="users",
+        resource_id=user.id,
+        status_code=status.HTTP_200_OK,
+        details=AuditService.build_details(
+            request_data=payload.model_dump(mode="json", exclude_none=True),
+        ),
+    )
     return UserRead.model_validate(user)
 
 
@@ -108,6 +141,14 @@ async def update_user(
 
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="delete",
+        resource_type="users",
+        resource_id=user.id,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
 
     return UserRead.model_validate(user)
 

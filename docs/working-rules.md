@@ -12,6 +12,29 @@ authoritative reference after session reloads.
 - In test and demo data, human-readable text fields must be filled in Russian.
 - Technical identifiers such as codes may remain stable in English when used as system keys.
 
+## Stage Completion Checklist
+After finishing each stage, always do the following before declaring it complete:
+
+1. Write and/or update automated tests for that stage.
+2. Ensure the tests cover:
+   - happy path
+   - access control
+   - main negative scenarios
+   - basic edge cases
+3. Perform a self-review of the code:
+   - architecture
+   - logic duplication
+   - access rights
+   - migrations
+   - possible bugs
+4. Fix the issues found during self-review.
+5. Verify that the new stage does not break already implemented modules.
+6. At the end, provide a short report:
+   - what was implemented
+   - what tests were added
+   - what exactly is covered
+   - what risks or uncovered areas remain
+
 ## Interaction Template
 Use this session flow unless explicitly overridden:
 1. Restate the request and collect missing context.

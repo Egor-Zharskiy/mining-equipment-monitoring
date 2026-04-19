@@ -3,12 +3,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.audit import get_audit_service
 from app.db.session import get_async_session
 from app.dependencies.auth import require_permissions
 from app.repositories.equipment_type_parameter_repository import EquipmentTypeParameterRepository
 from app.repositories.equipment_type_repository import EquipmentTypeRepository
 from app.repositories.parameter_repository import ParameterRepository
 from app.schemas.equipment_type_parameter import EquipmentTypeParameterCreate, EquipmentTypeParameterRead
+from app.services.audit_service import AuditService
 from app.services.equipment_type_parameter_service import EquipmentTypeParameterService
 
 router = APIRouter(prefix="/equipment-type-parameters", tags=["Equipment Type Parameters"])
@@ -33,6 +35,16 @@ async def create_equipment_type_parameter(
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="create",
+        resource_type="equipment_type_parameters",
+        resource_id=binding.id,
+        status_code=status.HTTP_201_CREATED,
+        details=AuditService.build_details(
+            request_data=payload.model_dump(mode="json", exclude_none=True),
+        ),
+    )
     return EquipmentTypeParameterRead.model_validate(binding)
 
 
@@ -98,3 +110,11 @@ async def delete_equipment_type_parameter(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Equipment type parameter binding not found.",
         )
+
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="delete",
+        resource_type="equipment_type_parameters",
+        resource_id=binding.id,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )

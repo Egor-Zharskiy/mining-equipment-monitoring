@@ -3,10 +3,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.audit import get_audit_service
 from app.db.session import get_async_session
 from app.dependencies.auth import require_permissions
 from app.repositories.equipment_type_repository import EquipmentTypeRepository
 from app.schemas.equipment_type import EquipmentTypeCreate, EquipmentTypeRead, EquipmentTypeUpdate
+from app.services.audit_service import AuditService
 from app.services.equipment_type_service import EquipmentTypeService
 
 router = APIRouter(prefix="/equipment-types", tags=["Equipment Types"])
@@ -27,6 +29,16 @@ async def create_equipment_type(
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="create",
+        resource_type="equipment_types",
+        resource_id=equipment_type.id,
+        status_code=status.HTTP_201_CREATED,
+        details=AuditService.build_details(
+            request_data=payload.model_dump(mode="json", exclude_none=True),
+        ),
+    )
     return EquipmentTypeRead.model_validate(equipment_type)
 
 
@@ -78,6 +90,17 @@ async def update_equipment_type(
     if equipment_type is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Equipment type not found.")
 
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="update",
+        resource_type="equipment_types",
+        resource_id=equipment_type.id,
+        status_code=status.HTTP_200_OK,
+        details=AuditService.build_details(
+            request_data=payload.model_dump(mode="json", exclude_none=True),
+        ),
+    )
+
     return EquipmentTypeRead.model_validate(equipment_type)
 
 
@@ -97,3 +120,11 @@ async def delete_equipment_type(
 
     if equipment_type is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Equipment type not found.")
+
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="delete",
+        resource_type="equipment_types",
+        resource_id=equipment_type.id,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )

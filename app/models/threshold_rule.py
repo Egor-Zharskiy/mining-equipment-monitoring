@@ -47,5 +47,8 @@ class ThresholdRule(Base):
         onupdate=func.now(),
     )
 
-    equipment_type: Mapped["EquipmentType"] = relationship(back_populates="threshold_rules", lazy="selectin")
-    parameter: Mapped["Parameter"] = relationship(back_populates="threshold_rules", lazy="selectin")
+    equipment_type: Mapped["EquipmentType"] = relationship(back_populates="threshold_rules")
+    parameter: Mapped["Parameter"] = relationship(back_populates="threshold_rules")
+    telemetry_evaluations: Mapped[list["TelemetryEvaluation"]] = relationship(
+        back_populates="threshold_rule",
+    )

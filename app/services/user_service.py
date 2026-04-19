@@ -1,5 +1,7 @@
+import time
 from uuid import UUID
 
+from app.core.profiling import log_auth_profile, profile_auth_step
 from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate, UserSelfUpdate, UserUpdate
@@ -126,17 +128,41 @@ class UserService:
     async def authenticate_user(self, *, email: str, password: str):
         """Authenticate a user by email and password."""
 
-        user = await self._user_repository.get_by_email(email)
+        total_start = time.perf_counter()
+        user = await self._user_repository.get_auth_by_email(email)
         if user is None:
+            log_auth_profile(
+                "user_service.authenticate_user.total",
+                time.perf_counter() - total_start,
+                email=email,
+                result="not_found",
+            )
             return None
 
-        if not SecurityService.verify_password(password, user.hashed_password):
+        with profile_auth_step("user_service.authenticate_user.verify_password", email=email):
+            is_valid_password = SecurityService.verify_password(password, user.hashed_password)
+
+        if not is_valid_password:
+            log_auth_profile(
+                "user_service.authenticate_user.total",
+                time.perf_counter() - total_start,
+                email=email,
+                result="invalid_password",
+            )
             return None
 
         if not user.is_active:
             raise ValueError("User account is inactive.")
 
-        return user
+        hydrated_user = await self._user_repository.get_by_id(user.id)
+        log_auth_profile(
+            "user_service.authenticate_user.total",
+            time.perf_counter() - total_start,
+            email=email,
+            user_id=user.id,
+            result="success",
+        )
+        return hydrated_user
 
     async def _ensure_unique_user_fields(
         self,

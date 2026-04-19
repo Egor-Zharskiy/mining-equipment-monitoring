@@ -66,7 +66,7 @@ async def _create_threshold_rule(client, equipment_type_id: str, parameter_id: s
 
 
 async def test_threshold_rule_crud_flow(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage", "threshold_rules.read", "threshold_rules.manage"})
+    await set_current_user({"equipment.read", "equipment.manage", "threshold_rules.read", "threshold_rules.manage"})
 
     equipment_type_id = await _create_equipment_type(client)
     parameter_id = await _create_parameter(client)
@@ -121,7 +121,7 @@ async def test_threshold_rule_crud_flow(client, set_current_user):
 
 
 async def test_threshold_rule_create_requires_manage_permission(client, set_current_user):
-    set_current_user({"threshold_rules.read"})
+    await set_current_user({"threshold_rules.read"})
 
     response = await client.post(
         "/api/v1/threshold-rules/",
@@ -138,7 +138,7 @@ async def test_threshold_rule_create_requires_manage_permission(client, set_curr
 
 
 async def test_threshold_rule_list_requires_read_permission(client, set_current_user):
-    set_current_user(set())
+    await set_current_user(set())
 
     response = await client.get("/api/v1/threshold-rules/")
 
@@ -147,7 +147,7 @@ async def test_threshold_rule_list_requires_read_permission(client, set_current_
 
 
 async def test_threshold_rule_rejects_duplicate_rule(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage", "threshold_rules.manage"})
+    await set_current_user({"equipment.read", "equipment.manage", "threshold_rules.manage"})
 
     equipment_type_id = await _create_equipment_type(client)
     parameter_id = await _create_parameter(client, code_prefix="duplicate_rule")
@@ -179,7 +179,7 @@ async def test_threshold_rule_rejects_duplicate_rule(client, set_current_user):
 
 
 async def test_threshold_rule_requires_existing_equipment_type_parameter_binding(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage", "threshold_rules.manage"})
+    await set_current_user({"equipment.read", "equipment.manage", "threshold_rules.manage"})
 
     equipment_type_id = await _create_equipment_type(client)
     parameter_id = await _create_parameter(client, code_prefix="binding_required")
@@ -199,7 +199,7 @@ async def test_threshold_rule_requires_existing_equipment_type_parameter_binding
 
 
 async def test_threshold_rule_requires_at_least_one_threshold_value(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage", "threshold_rules.manage"})
+    await set_current_user({"equipment.read", "equipment.manage", "threshold_rules.manage"})
 
     equipment_type_id = await _create_equipment_type(client)
     parameter_id = await _create_parameter(client, code_prefix="no_values")
@@ -219,7 +219,7 @@ async def test_threshold_rule_requires_at_least_one_threshold_value(client, set_
 
 
 async def test_threshold_rule_validates_threshold_order(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage", "threshold_rules.manage"})
+    await set_current_user({"equipment.read", "equipment.manage", "threshold_rules.manage"})
 
     equipment_type_id = await _create_equipment_type(client)
     parameter_id = await _create_parameter(client, code_prefix="invalid_order")
@@ -241,7 +241,7 @@ async def test_threshold_rule_validates_threshold_order(client, set_current_user
 
 
 async def test_threshold_rule_update_validates_final_state(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage", "threshold_rules.read", "threshold_rules.manage"})
+    await set_current_user({"equipment.read", "equipment.manage", "threshold_rules.read", "threshold_rules.manage"})
 
     equipment_type_id = await _create_equipment_type(client)
     parameter_id = await _create_parameter(client, code_prefix="update_final_state")
@@ -263,7 +263,7 @@ async def test_threshold_rule_update_validates_final_state(client, set_current_u
 
 
 async def test_threshold_rule_update_rejects_duplicate_pair(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage", "threshold_rules.manage"})
+    await set_current_user({"equipment.read", "equipment.manage", "threshold_rules.manage"})
 
     equipment_type_id = await _create_equipment_type(client)
 
@@ -286,7 +286,7 @@ async def test_threshold_rule_update_rejects_duplicate_pair(client, set_current_
 
 
 async def test_threshold_rule_list_filters_by_parameter_id(client, set_current_user):
-    set_current_user({"equipment.read", "equipment.manage", "threshold_rules.read", "threshold_rules.manage"})
+    await set_current_user({"equipment.read", "equipment.manage", "threshold_rules.read", "threshold_rules.manage"})
 
     first_type_id = await _create_equipment_type(client)
     second_type_id = await _create_equipment_type(client)
@@ -311,7 +311,7 @@ async def test_threshold_rule_list_filters_by_parameter_id(client, set_current_u
 
 
 async def test_get_threshold_rule_returns_404_for_unknown_id(client, set_current_user):
-    set_current_user({"threshold_rules.read"})
+    await set_current_user({"threshold_rules.read"})
 
     response = await client.get(f"/api/v1/threshold-rules/{uuid4()}")
 
@@ -320,7 +320,7 @@ async def test_get_threshold_rule_returns_404_for_unknown_id(client, set_current
 
 
 async def test_update_threshold_rule_returns_404_for_unknown_id(client, set_current_user):
-    set_current_user({"threshold_rules.manage"})
+    await set_current_user({"threshold_rules.manage"})
 
     response = await client.patch(
         f"/api/v1/threshold-rules/{uuid4()}",
@@ -332,7 +332,7 @@ async def test_update_threshold_rule_returns_404_for_unknown_id(client, set_curr
 
 
 async def test_delete_threshold_rule_returns_404_for_unknown_id(client, set_current_user):
-    set_current_user({"threshold_rules.manage"})
+    await set_current_user({"threshold_rules.manage"})
 
     response = await client.delete(f"/api/v1/threshold-rules/{uuid4()}")
 

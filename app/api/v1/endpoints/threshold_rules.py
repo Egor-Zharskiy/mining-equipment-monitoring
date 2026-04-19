@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.audit import get_audit_service
 from app.db.session import get_async_session
 from app.dependencies.auth import require_permissions
 from app.repositories.equipment_type_parameter_repository import EquipmentTypeParameterRepository
@@ -10,6 +11,7 @@ from app.repositories.equipment_type_repository import EquipmentTypeRepository
 from app.repositories.parameter_repository import ParameterRepository
 from app.repositories.threshold_rule_repository import ThresholdRuleRepository
 from app.schemas.threshold_rule import ThresholdRuleCreate, ThresholdRuleRead, ThresholdRuleUpdate
+from app.services.audit_service import AuditService
 from app.services.threshold_rule_service import ThresholdRuleService
 
 router = APIRouter(prefix="/threshold-rules", tags=["Threshold Rules"])
@@ -41,6 +43,16 @@ async def create_threshold_rule(
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="create",
+        resource_type="threshold_rules",
+        resource_id=rule.id,
+        status_code=status.HTTP_201_CREATED,
+        details=AuditService.build_details(
+            request_data=payload.model_dump(mode="json", exclude_none=True),
+        ),
+    )
     return ThresholdRuleRead.model_validate(rule)
 
 
@@ -94,6 +106,16 @@ async def update_threshold_rule(
     if rule is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Threshold rule not found.")
 
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="update",
+        resource_type="threshold_rules",
+        resource_id=rule.id,
+        status_code=status.HTTP_200_OK,
+        details=AuditService.build_details(
+            request_data=payload.model_dump(mode="json", exclude_none=True),
+        ),
+    )
     return ThresholdRuleRead.model_validate(rule)
 
 
@@ -110,3 +132,11 @@ async def delete_threshold_rule(
 
     if rule is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Threshold rule not found.")
+
+    await get_audit_service(session).log_action(
+        actor_user_id=current_user.id,
+        action="delete",
+        resource_type="threshold_rules",
+        resource_id=rule.id,
+        status_code=status.HTTP_204_NO_CONTENT,
+    )

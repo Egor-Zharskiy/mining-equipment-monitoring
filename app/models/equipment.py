@@ -34,4 +34,25 @@ class Equipment(Base):
         onupdate=func.now(),
     )
 
-    equipment_type: Mapped["EquipmentType"] = relationship(back_populates="equipment", lazy="selectin")
+    equipment_type: Mapped["EquipmentType"] = relationship(back_populates="equipment")
+    telemetry_readings: Mapped[list["TelemetryReading"]] = relationship(
+        back_populates="equipment",
+    )
+    parameter_states: Mapped[list["EquipmentParameterState"]] = relationship(
+        back_populates="equipment",
+        cascade="all, delete-orphan",
+    )
+    current_state: Mapped["EquipmentState | None"] = relationship(
+        back_populates="equipment",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    maintenance_plans: Mapped[list["MaintenancePlan"]] = relationship(
+        back_populates="equipment",
+    )
+    maintenance_tasks: Mapped[list["MaintenanceTask"]] = relationship(
+        back_populates="equipment",
+    )
+    maintenance_records: Mapped[list["MaintenanceRecord"]] = relationship(
+        back_populates="equipment",
+    )
