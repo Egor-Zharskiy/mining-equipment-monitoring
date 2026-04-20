@@ -57,8 +57,9 @@ Use it as a quick re-entry point after a session reload.
   - unread counter and mark-as-read flow
 
 ## Current Branch
-- Current branch: `feature/telemetry-ingestion`
-- Stage 5, Stage 6, Stage 7, Stage 8, and Stage 9 code are implemented on this branch and not yet committed at the time of writing this summary.
+- Current branch: `main`
+- Latest pushed commit: `689e2e9 Finalize monitoring MVP hardening`
+- `main` is synchronized with `origin/main` after the MVP hardening commit.
 
 ## Stage 4 Details
 - Added `threshold_rules` table, model, schemas, repository, service, routes, and tests.
@@ -290,3 +291,83 @@ The backend currently supports:
 
 ## After Audit
 - choose post-MVP hardening or enhancement scope
+
+## Final MVP Hardening Completed
+- Removed frontend demo-data fallback:
+  - deleted `frontend/src/api/demoData.js`
+  - deleted `frontend/src/components/DataFallbackNotice.jsx`
+  - frontend pages now use real API data, empty states, and error alerts instead of mocked fallback data
+- Added centralized backend logging:
+  - `app/core/logging_config.py`
+  - request logging middleware in `main.py`
+  - `X-Request-ID` response header and request-id propagation into business logs
+  - `LOG_LEVEL`, `LOG_FORMAT`, and `LOG_REQUESTS` runtime controls
+- Added business logs for:
+  - authentication outcomes
+  - telemetry ingestion and processing
+  - equipment state evaluation and status changes
+  - monitoring event creation
+  - notification creation and email delivery
+  - maintenance task creation, updates, and completion
+  - audit log creation
+- Hardened email delivery:
+  - email-channel notifications are still stored in the database
+  - real SMTP delivery is still controlled by `MAIL_ENABLED`
+  - SMTP send attempts are detached from the primary HTTP response path through `asyncio.create_task`
+  - slow or unavailable SMTP no longer blocks telemetry ingestion or maintenance task creation
+  - delivered email notifications are marked with `delivered_at` when delivery succeeds
+- Added event follow-up workflow:
+  - `POST /events/{event_id}/maintenance-task`
+  - requires `events.read` and `maintenance.manage`
+  - creates a maintenance task for the event equipment
+  - writes audit action `create_from_event`
+  - frontend events page has a `Задача ТО` action and dialog
+- Added `scripts/seed_demo.py`:
+  - idempotent local demo seed
+  - creates demo users, equipment types, equipment, parameters, bindings, threshold rules, telemetry, events, maintenance plan, open task, and completed task
+  - uses disabled email delivery internally to avoid real SMTP sends during seeding
+- Demo credentials after seed:
+  - `demo.admin@example.com` / `Demo12345!`
+  - `demo.manager@example.com` / `Demo12345!`
+  - `demo.technician@example.com` / `Demo12345!`
+- Demo equipment codes after seed:
+  - `DEMO-HT-118`
+  - `DEMO-EX-204`
+  - `DEMO-DR-32`
+
+## Final Verification
+- `poetry run python scripts/seed_demo.py` -> completed successfully
+- `poetry run pytest -q app/tests` -> `121 passed`
+- `npm run lint` -> passed
+- `npm run build` -> passed
+- live HTTP E2E smoke scenario -> `21/21` checks passed
+- backend and frontend were started locally:
+  - backend: `http://127.0.0.1:8000`
+  - frontend: `http://127.0.0.1:5173`
+- live HTTP scenario covered:
+  - frontend availability
+  - backend OpenAPI availability
+  - demo user login
+  - analytics overview and dashboard endpoints
+  - seed equipment and parameter lookup
+  - normal telemetry ingestion
+  - critical telemetry ingestion
+  - critical event generation
+  - maintenance task creation from event
+  - notification unread count
+  - audit log read API
+  - RBAC denial for manager without `maintenance.manage`
+  - RBAC denial for manager without `telemetry.create`
+- SMTP non-blocking check with `MAIL_ENABLED=true`:
+  - maintenance task creation returned `201` in `0.08s`
+  - SMTP itself timed out in the local environment, but the API request was not blocked or crashed
+
+## Current Verdict
+- Backend MVP business logic is working for the implemented diploma scope.
+- Frontend is wired to real backend data and builds successfully.
+- The remaining high-value work is documentation and packaging:
+  - README
+  - `.env.example`
+  - defense demo checklist
+  - optional CI
+- Optional post-MVP features such as Excel export, WebSocket realtime updates, Redis caching, SMS, GPS maps, and ML predictions are not required for the current diploma MVP.

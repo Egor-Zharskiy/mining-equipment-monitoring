@@ -27,12 +27,14 @@ app/
       endpoints/
       router.py
   core/
+    logging_config.py
     monitoring.py
     events.py
   config/
     app_config.py
     auth_config.py
     db_config.py
+    mail_config.py
   db/
     base.py
     session.py
@@ -41,6 +43,15 @@ app/
   schemas/
   services/
   tests/
+frontend/
+  src/
+    api/
+    auth/
+    components/
+    layout/
+    pages/
+scripts/
+  seed_demo.py
 main.py
 docs/
   architecture.md
@@ -104,6 +115,11 @@ event creation, notification creation and email delivery, maintenance task
 changes, audit log creation, and authentication outcomes. Request bodies,
 passwords, access tokens, and SMTP secrets are intentionally not logged.
 
+Email delivery is intentionally outside the critical HTTP response path.
+Notification records are created in the request transaction, while the external
+SMTP send is scheduled as a detached async task. If SMTP is unavailable, the API
+request still succeeds and the failure is logged.
+
 ## Nearest MVP
 
 This milestone has already been passed. The project now contains implemented
@@ -116,6 +132,28 @@ stages for:
 5. telemetry ingestion
 6. equipment state evaluation
 7. events
+8. maintenance
+9. notifications
+10. analytics
+11. audit
+
+## Frontend Architecture
+
+The frontend is a React application under `frontend/`. It calls the backend API
+through `frontend/src/api/*`, stores auth state through the auth provider, and
+uses permission-aware routing/navigation for access control in the UI.
+
+Demo fallback data has been removed. Frontend pages now rely on real backend
+responses and render empty/error states when the API has no data or fails.
+
+The events page includes the operational follow-up flow for creating a
+maintenance task from a monitoring event.
+
+## Demo Data
+
+Local demo data is created by `scripts/seed_demo.py`. The script is idempotent
+and creates users, catalog data, telemetry, events, notifications, maintenance
+plans, and maintenance tasks for manual checks and defense demos.
 
 ## Current State
 
@@ -124,4 +162,6 @@ stages for:
 - Configuration is split into `app/config/*`.
 - The current implemented business modules are users/RBAC, equipment registry,
   monitoring parameters, threshold rules, telemetry readings, equipment states,
-  and events.
+  events, maintenance, notifications, analytics, and audit.
+- The latest verification baseline is `121` passing backend tests, passing
+  frontend lint/build, and a passing live HTTP E2E smoke scenario.

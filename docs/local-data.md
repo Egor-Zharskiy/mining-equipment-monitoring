@@ -65,3 +65,55 @@ history records for local API checks.
 - Inserts were made idempotent by fixed record identifiers to avoid duplicates on repeated execution.
 - Each telemetry record uses an existing `equipment` and a parameter already assigned through `equipment_type_parameters`.
 - The current local database state contains 4 telemetry readings.
+
+## 2026-04-20 Demo Seed Script
+
+Local demo data is now standardized through `scripts/seed_demo.py`.
+The script is intended for repeatable local testing and diploma defense
+scenarios. It is idempotent and may be run multiple times.
+
+### Run Command
+
+```bash
+poetry run python scripts/seed_demo.py
+```
+
+### Demo Users
+- `demo.admin@example.com` / `Demo12345!` — admin role
+- `demo.manager@example.com` / `Demo12345!` — manager role
+- `demo.technician@example.com` / `Demo12345!` — technician role
+
+### Demo Equipment
+- `DEMO-HT-118` — `Демо: самосвал HT-118`
+- `DEMO-EX-204` — `Демо: экскаватор EX-204`
+- `DEMO-DR-32` — `Демо: буровая установка DR-32`
+
+### Demo Monitoring Parameters
+- `demo_engine_temperature` — temperature-style parameter for engine checks
+- `demo_vibration` — vibration-style parameter
+- `demo_hydraulic_pressure` — pressure-style parameter
+
+### Demo Thresholds
+- engine temperature:
+  - warning max `80`
+  - critical max `95`
+- vibration:
+  - warning max `6`
+  - critical max `10`
+- hydraulic pressure:
+  - warning min `12`
+  - critical min `10`
+
+### Demo Telemetry and Workflow Data
+- critical telemetry for `DEMO-HT-118` engine temperature
+- warning telemetry for `DEMO-HT-118` vibration
+- warning telemetry for `DEMO-EX-204` engine temperature
+- normal telemetry for `DEMO-DR-32` hydraulic pressure
+- maintenance plan for chassis diagnostics
+- open maintenance task for checking the truck engine
+- completed maintenance task and record for excavator diagnostics
+
+### Notes
+- The seed uses application services where appropriate, so telemetry can create evaluations, states, events, and notifications.
+- The seed disables real SMTP delivery internally to avoid sending emails during local data preparation.
+- Seed data is local demo data and must not be turned into Alembic migration data without a separate product decision.

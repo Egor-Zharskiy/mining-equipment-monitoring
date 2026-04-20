@@ -55,6 +55,8 @@ The following backend functionality is already implemented or started:
 - parameter-level events for `warning`, `critical`, and recovery to `normal`
 - equipment-level events for `warning`, `critical`, and recovery to `normal`
 - events read API with filtering by equipment, parameter, severity, and type
+- follow-up maintenance task creation from a monitoring event through
+  `POST /events/{event_id}/maintenance-task`
 - API tests for generation, recovery transitions, filtering, access control, and negative scenarios
 
 ### Maintenance
@@ -69,6 +71,8 @@ The following backend functionality is already implemented or started:
 - internal notifications for authenticated users
 - email-channel notification records for important events and upcoming maintenance
 - real SMTP email delivery for email-channel notifications when `MAIL_ENABLED=true`
+- SMTP delivery is detached from the main HTTP response path so slow or unavailable
+  SMTP does not block telemetry ingestion or task creation
 - automatic notifications for critical and warning events are enabled by default and can be disabled through `ENABLE_RUNTIME_NOTIFICATIONS=false`
 - automatic notifications for upcoming maintenance tasks are enabled by default and can be disabled through `ENABLE_RUNTIME_NOTIFICATIONS=false`
 - manual notification creation API for administrative users
@@ -94,10 +98,28 @@ The following backend functionality is already implemented or started:
 - audit read API with filtering by actor, action, resource, and date range
 - API tests for happy path, access control, negative scenarios, and edge cases
 
+### Frontend
+- React frontend for the main business modules
+- dashboard, equipment, events, maintenance, notifications, users, roles, audit logs, and monitoring catalog pages
+- frontend authorization based on backend permissions
+- demo-data fallback was removed; UI now uses real API data and shows empty/error states when backend data is unavailable
+- events page supports creating a maintenance task from a selected event
+
+### Demo Data
+- `scripts/seed_demo.py` provides repeatable local demo data for defense and manual testing
+- the seed creates demo users, equipment types, equipment, parameters, bindings, threshold rules, telemetry, events, maintenance plans, and maintenance tasks
+- seed data is intended for local development only and is not part of Alembic migrations
+
 ## Current Focus
-Audit is implemented. The current roadmap stages are complete through MVP scope.
+The current roadmap stages are complete through MVP scope.
 
 The access module should be treated as the base for all future modules.
+
+Current remaining work is project packaging and documentation hardening rather
+than a missing business module:
+- keep README and environment examples up to date
+- keep demo checklist ready for defense
+- optionally add CI for tests, lint, and frontend build
 
 ## What Is Considered Done at This Stage
 - user model exists
@@ -122,6 +144,10 @@ The access module should be treated as the base for all future modules.
 - notification model exists
 - analytics read API exists over monitoring, events, maintenance, and notifications data
 - audit log model and audit read API exist
+- frontend screens exist for the implemented business scope
+- local seed script exists for reproducible demo data
+- request and business operation logging exists
+- email delivery failures no longer block the primary API flow
 
 ## What Must Be Preserved
 - current auth/access architecture
@@ -140,9 +166,10 @@ Core MVP stages from access control through audit are implemented.
 
 The next active target should be chosen from post-MVP hardening or enhancements, for example:
 
-1. audit improvements
-2. notification delivery hardening
-3. analytics optimization
+1. README and `.env.example`
+2. defense demo checklist
+3. CI for backend tests and frontend build
+4. optional export/reporting features
 
 ## Important Reminder
 This is a bachelor diploma backend project.
@@ -156,4 +183,16 @@ Priorities:
 ## Local Development Data
 - On 2026-03-23, the local development database was manually populated with Stage 3 test data for `parameters` and `equipment_type_parameters`.
 - On 2026-03-23, the local development database was manually populated with Stage 4 base data for `threshold_rules`.
+- On 2026-04-20, local demo data was standardized through `scripts/seed_demo.py`.
 - Details are documented in `docs/local-data.md`.
+
+## Latest Verification
+- `poetry run pytest -q app/tests` -> `121 passed`
+- `npm run lint` -> passed
+- `npm run build` -> passed
+- live HTTP E2E smoke scenario -> `21/21` checks passed
+- SMTP non-blocking check with `MAIL_ENABLED=true` -> task creation returned `201` in `0.08s`
+
+## Latest Repository State
+- latest commit: `689e2e9 Finalize monitoring MVP hardening`
+- pushed to `origin/main`
